@@ -42,7 +42,7 @@ def create_agent(
     )
 
     # Create and return the deep agent
-    return create_deep_agent(llm=llm)
+    return create_deep_agent(model=llm)
 
 
 def run_agent_task(task: str, model: Optional[str] = None) -> dict:

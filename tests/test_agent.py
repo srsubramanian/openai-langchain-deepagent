@@ -33,8 +33,8 @@ class TestCreateAgent:
             assert call_kwargs["temperature"] == 0.7
             assert call_kwargs["api_key"] == "test-key"
 
-            # Verify create_deep_agent was called with the LLM
-            mock_create_deep_agent.assert_called_once_with(llm=mock_llm)
+            # Verify create_deep_agent was called with the model
+            mock_create_deep_agent.assert_called_once_with(model=mock_llm)
             assert agent == mock_agent
 
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
