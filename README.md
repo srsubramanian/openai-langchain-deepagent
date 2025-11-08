@@ -1,6 +1,6 @@
 # openai-langchain-deepagent
 
-A Python project demonstrating LangChain DeepAgents with OpenAI and Anthropic integration.
+A Python project demonstrating LangChain DeepAgents with OpenAI integration.
 
 ## About
 
@@ -9,17 +9,15 @@ This project showcases the [LangChain DeepAgents](https://docs.langchain.com/oss
 - **Complex Task Planning**: Break down tasks into manageable steps with built-in planning tools
 - **File System Management**: Handle large contexts using filesystem tools (read, write, edit files)
 - **Subagent Spawning**: Create specialized agents for complex, multi-step workflows
-- **Multi-LLM Support**: Works with OpenAI, Anthropic Claude, and other LangChain-supported models
+- **OpenAI Integration**: Powered by OpenAI's GPT models
 
-The project uses [uv](https://github.com/astral-sh/uv) for fast dependency management and includes examples for both OpenAI and Anthropic models.
+The project uses [uv](https://github.com/astral-sh/uv) for fast dependency management.
 
 ## Prerequisites
 
 - Python 3.11 or higher (required by deepagents)
 - uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- API key from either:
-  - [Anthropic](https://console.anthropic.com/) (recommended)
-  - [OpenAI](https://platform.openai.com/api-keys)
+- [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Installation
 
@@ -30,8 +28,7 @@ The project uses [uv](https://github.com/astral-sh/uv) for fast dependency manag
 # Copy the example environment file
 cp .env.example .env
 
-# Edit .env and add your API keys
-# Add either ANTHROPIC_API_KEY or OPENAI_API_KEY (or both)
+# Edit .env and add your OpenAI API key
 ```
 
 3. Install dependencies with uv:
@@ -81,11 +78,11 @@ Or use DeepAgents in your own code:
 from openai_langchain_deepagent.agent import create_agent, run_agent_task
 
 # Quick usage
-result = run_agent_task("Write a Python function to sort a list", provider="anthropic")
+result = run_agent_task("Write a Python function to sort a list")
 print(result)
 
 # Advanced usage with custom configuration
-agent = create_agent(provider="openai", model="gpt-4o", temperature=0.5)
+agent = create_agent(model="gpt-4o", temperature=0.5)
 response = agent.invoke({"task": "Your task here"})
 ```
 
@@ -141,7 +138,7 @@ This project demonstrates:
 
 1. **Planning**: Agents can break down complex tasks into steps
 2. **File Operations**: Read, write, and edit files for context management
-3. **Multi-Provider Support**: Switch between OpenAI and Anthropic models
+3. **OpenAI Integration**: Leverages GPT-4o and other OpenAI models
 4. **Extensible**: Easy to add custom tools and capabilities
 
 ### Key Components
@@ -157,24 +154,22 @@ This project demonstrates:
 Set the following in your `.env` file:
 
 ```bash
-# Anthropic (recommended - uses Claude Sonnet 4.5)
-ANTHROPIC_API_KEY=your_key_here
-
-# OpenAI (alternative)
+# OpenAI API Key (required)
 OPENAI_API_KEY=your_key_here
 ```
 
 ### Supported Models
 
-**Anthropic:**
-- `claude-sonnet-4-5-20250929` (default)
-- `claude-3-opus-20240229`
-- `claude-3-sonnet-20240229`
-
-**OpenAI:**
-- `gpt-4o` (default)
+You can use any OpenAI model:
+- `gpt-4o` (default, recommended)
 - `gpt-4-turbo`
+- `gpt-4`
 - `gpt-3.5-turbo`
+
+Pass the model parameter when creating an agent:
+```python
+agent = create_agent(model="gpt-4-turbo")
+```
 
 ## Learn More
 

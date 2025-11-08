@@ -1,11 +1,10 @@
-"""DeepAgent implementation using LangChain DeepAgents library."""
+"""DeepAgent implementation using LangChain DeepAgents library with OpenAI."""
 
 import os
 from typing import Optional
 
 from deepagents import DeepAgent
 from dotenv import load_dotenv
-from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 
 # Load environment variables
@@ -13,66 +12,46 @@ load_dotenv()
 
 
 def create_agent(
-    provider: str = "anthropic",
     model: Optional[str] = None,
     temperature: float = 0.7,
 ) -> DeepAgent:
     """
-    Create a DeepAgent with the specified LLM provider.
+    Create a DeepAgent with OpenAI.
 
     Args:
-        provider: LLM provider to use ("anthropic" or "openai")
-        model: Specific model name. If None, uses defaults:
-               - anthropic: claude-sonnet-4-5-20250929
-               - openai: gpt-4o
+        model: Specific model name. If None, uses default: gpt-4o
         temperature: Temperature for the model (0.0-1.0)
 
     Returns:
         Configured DeepAgent instance
 
     Raises:
-        ValueError: If provider is not supported or API key is missing
+        ValueError: If OPENAI_API_KEY is missing
     """
-    if provider == "anthropic":
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "ANTHROPIC_API_KEY not found in environment variables. "
-                "Please set it in your .env file or environment."
-            )
-        llm = ChatAnthropic(
-            model=model or "claude-sonnet-4-5-20250929",
-            temperature=temperature,
-            api_key=api_key,
-        )
-    elif provider == "openai":
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "OPENAI_API_KEY not found in environment variables. "
-                "Please set it in your .env file or environment."
-            )
-        llm = ChatOpenAI(
-            model=model or "gpt-4o",
-            temperature=temperature,
-            api_key=api_key,
-        )
-    else:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
         raise ValueError(
-            f"Unsupported provider: {provider}. Choose 'anthropic' or 'openai'."
+            "OPENAI_API_KEY not found in environment variables. "
+            "Please set it in your .env file or environment."
         )
+
+    llm = ChatOpenAI(
+        model=model or "gpt-4o",
+        temperature=temperature,
+        api_key=api_key,
+    )
 
     # Create and return the DeepAgent
     return DeepAgent(llm=llm)
 
 
-def run_agent_task(task: str, provider: str = "anthropic") -> dict:
+def run_agent_task(task: str, model: Optional[str] = None) -> dict:
     """
-    Run a task with a DeepAgent.
+    Run a task with a DeepAgent using OpenAI.
 
     Args:
         task: The task description for the agent to execute
-        provider: LLM provider to use ("anthropic" or "openai")
+        model: Optional specific model to use (default: gpt-4o)
 
     Returns:
         Dictionary containing the agent's response and execution details
@@ -81,7 +60,7 @@ def run_agent_task(task: str, provider: str = "anthropic") -> dict:
         >>> result = run_agent_task("Write a hello world function in Python")
         >>> print(result['output'])
     """
-    agent = create_agent(provider=provider)
+    agent = create_agent(model=model)
 
     # Execute the task
     result = agent.invoke({"task": task})
