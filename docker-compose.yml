@@ -1,0 +1,8 @@
+services:
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"  # Phoenix UI
+      - "4317:4317"  # OTLP gRPC receiver
+      - "9090:9090"  # Prometheus metrics
+    restart: unless-stopped

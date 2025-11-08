@@ -18,6 +18,7 @@ The project uses [uv](https://github.com/astral-sh/uv) for fast dependency manag
 - Python 3.11 or higher (required by deepagents)
 - uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - [OpenAI API key](https://platform.openai.com/api-keys)
+- Docker and Docker Compose (optional, for Phoenix observability)
 
 ## Installation
 
@@ -86,6 +87,44 @@ agent = create_agent(model="gpt-4o", temperature=0.5)
 response = agent.invoke({"messages": [{"role": "user", "content": "Your task here"}]})
 ```
 
+## Phoenix Observability (Optional)
+
+This project includes Phoenix for observability and tracing of your DeepAgent executions.
+
+### Starting Phoenix
+
+Start the Phoenix service using Docker Compose:
+
+```bash
+# Start Phoenix in the background
+docker compose up -d
+
+# View logs
+docker compose logs -f phoenix
+
+# Check status
+docker compose ps
+```
+
+Phoenix will be available at:
+- **UI**: http://localhost:6006
+- **OTLP gRPC**: localhost:4317
+- **Prometheus metrics**: http://localhost:9090
+
+### Stopping Phoenix
+
+```bash
+# Stop Phoenix
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+```
+
+### Using Phoenix with DeepAgents
+
+Once Phoenix is running, you can view traces and metrics of your agent executions in the Phoenix UI at http://localhost:6006.
+
 ## Development
 
 ### Running Tests
@@ -126,6 +165,7 @@ ruff format .
 ├── examples/
 │   └── basic_agent.py       # Example usage
 ├── .env.example             # Example environment variables
+├── docker-compose.yml       # Phoenix observability service
 ├── pyproject.toml           # Project configuration
 └── README.md
 ```
