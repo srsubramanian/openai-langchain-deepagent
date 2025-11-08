@@ -15,7 +15,7 @@ The project uses [uv](https://github.com/astral-sh/uv) for fast dependency manag
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11 or higher (required by deepagents)
 - uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - API key from either:
   - [Anthropic](https://console.anthropic.com/) (recommended)
