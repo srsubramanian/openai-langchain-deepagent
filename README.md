@@ -87,9 +87,9 @@ agent = create_agent(model="gpt-4o", temperature=0.5)
 response = agent.invoke({"messages": [{"role": "user", "content": "Your task here"}]})
 ```
 
-## Phoenix Observability (Optional)
+## Phoenix Observability
 
-This project includes Phoenix for observability and tracing of your DeepAgent executions.
+This project includes **automatic Phoenix instrumentation** for observability and tracing of your DeepAgent executions.
 
 ### Starting Phoenix
 
@@ -111,6 +111,46 @@ Phoenix will be available at:
 - **OTLP gRPC**: localhost:4317
 - **Prometheus metrics**: http://localhost:9090
 
+### Using Phoenix with DeepAgents
+
+**Phoenix instrumentation is enabled by default!** When you run your agent examples, traces are automatically sent to Phoenix at http://localhost:6006.
+
+```bash
+# Start Phoenix first
+docker compose up -d
+
+# Run your agent (traces will automatically appear in Phoenix UI)
+uv run python examples/basic_agent.py
+
+# Open Phoenix UI to see traces
+open http://localhost:6006
+```
+
+You'll see detailed traces including:
+- LLM requests and responses
+- Token usage and costs
+- Latency metrics
+- Agent tool calls
+- Complete execution flows
+
+### Configuration
+
+Control Phoenix instrumentation via environment variables in your `.env` file:
+
+```bash
+# Enable/disable Phoenix (default: true)
+PHOENIX_ENABLED=true
+
+# Phoenix endpoint (default: http://localhost:4317)
+PHOENIX_ENDPOINT=http://localhost:4317
+```
+
+To disable Phoenix instrumentation:
+```bash
+# In your .env file
+PHOENIX_ENABLED=false
+```
+
 ### Stopping Phoenix
 
 ```bash
@@ -120,10 +160,6 @@ docker compose down
 # Stop and remove volumes
 docker compose down -v
 ```
-
-### Using Phoenix with DeepAgents
-
-Once Phoenix is running, you can view traces and metrics of your agent executions in the Phoenix UI at http://localhost:6006.
 
 ## Development
 
@@ -156,17 +192,18 @@ ruff format .
 ├── src/
 │   └── openai_langchain_deepagent/
 │       ├── __init__.py
-│       ├── main.py          # Main entry point
-│       └── agent.py         # DeepAgent implementation
+│       ├── main.py              # Main entry point
+│       ├── agent.py             # DeepAgent implementation
+│       └── instrumentation.py   # Phoenix observability setup
 ├── tests/
 │   ├── __init__.py
 │   ├── test_main.py
-│   └── test_agent.py        # DeepAgent tests
+│   └── test_agent.py            # DeepAgent tests
 ├── examples/
-│   └── basic_agent.py       # Example usage
-├── .env.example             # Example environment variables
-├── docker-compose.yml       # Phoenix observability service
-├── pyproject.toml           # Project configuration
+│   └── basic_agent.py           # Example usage
+├── .env.example                 # Example environment variables
+├── docker-compose.yml           # Phoenix observability service
+├── pyproject.toml               # Project configuration
 └── README.md
 ```
 

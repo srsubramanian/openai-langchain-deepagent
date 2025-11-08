@@ -7,8 +7,13 @@ from deepagents import create_deep_agent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
+from .instrumentation import setup_phoenix_instrumentation
+
 # Load environment variables
 load_dotenv()
+
+# Set up Phoenix instrumentation for observability
+setup_phoenix_instrumentation()
 
 
 def create_agent(
