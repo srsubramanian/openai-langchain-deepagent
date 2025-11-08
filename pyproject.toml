@@ -1,10 +1,15 @@
 [project]
 name = "openai-langchain-deepagent"
 version = "0.1.0"
-description = "A Python starter project using uv"
+description = "A Python project demonstrating LangChain DeepAgents with OpenAI integration"
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "deepagents>=0.2.0",
+    "langchain-openai>=0.1.0",
+    "langchain-anthropic>=0.1.0",
+    "python-dotenv>=1.0.0",
+]
 
 [project.optional-dependencies]
 dev = [
