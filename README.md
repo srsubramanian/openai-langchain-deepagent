@@ -30,11 +30,23 @@ uv pip install -e ".[dev]"
 
 ## Usage
 
-Run the main module:
+### Quick Run with uv
+
+The fastest way to run the project (no installation needed):
+
+```bash
+uv run python -m openai_langchain_deepagent.main
+```
+
+### Traditional Run
+
+After installing the project, run the main module:
 
 ```bash
 python -m openai_langchain_deepagent.main
 ```
+
+### Import in Your Code
 
 Or import in your Python code:
 
@@ -49,11 +61,11 @@ print(hello("World"))
 ### Running Tests
 
 ```bash
-# Run tests with pytest
-pytest
+# Run tests with pytest (using uv)
+uv run pytest
 
 # Run tests with coverage
-pytest --cov=openai_langchain_deepagent
+uv run pytest --cov=openai_langchain_deepagent
 ```
 
 ### Code Formatting
