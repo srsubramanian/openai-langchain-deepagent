@@ -83,7 +83,7 @@ print(result)
 
 # Advanced usage with custom configuration
 agent = create_agent(model="gpt-4o", temperature=0.5)
-response = agent.invoke({"task": "Your task here"})
+response = agent.invoke({"messages": [{"role": "user", "content": "Your task here"}]})
 ```
 
 ## Development

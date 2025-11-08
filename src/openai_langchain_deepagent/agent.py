@@ -1,9 +1,9 @@
 """DeepAgent implementation using LangChain DeepAgents library with OpenAI."""
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
-from deepagents import DeepAgent
+from deepagents import create_deep_agent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -14,7 +14,7 @@ load_dotenv()
 def create_agent(
     model: Optional[str] = None,
     temperature: float = 0.7,
-) -> DeepAgent:
+) -> Any:
     """
     Create a DeepAgent with OpenAI.
 
@@ -23,7 +23,7 @@ def create_agent(
         temperature: Temperature for the model (0.0-1.0)
 
     Returns:
-        Configured DeepAgent instance
+        Configured deep agent instance
 
     Raises:
         ValueError: If OPENAI_API_KEY is missing
@@ -41,8 +41,8 @@ def create_agent(
         api_key=api_key,
     )
 
-    # Create and return the DeepAgent
-    return DeepAgent(llm=llm)
+    # Create and return the deep agent
+    return create_deep_agent(llm=llm)
 
 
 def run_agent_task(task: str, model: Optional[str] = None) -> dict:
@@ -63,7 +63,7 @@ def run_agent_task(task: str, model: Optional[str] = None) -> dict:
     agent = create_agent(model=model)
 
     # Execute the task
-    result = agent.invoke({"task": task})
+    result = agent.invoke({"messages": [{"role": "user", "content": task}]})
 
     return result
 
