@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Checkpoint databases
+checkpoints.db
+*.db
+
 # C extensions
 *.so
 

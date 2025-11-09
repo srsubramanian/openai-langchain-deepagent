@@ -6,6 +6,7 @@ from typing import Any, Optional
 from deepagents import create_deep_agent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 from .instrumentation import setup_phoenix_instrumentation
 
@@ -19,6 +20,8 @@ setup_phoenix_instrumentation()
 def create_agent(
     model: Optional[str] = None,
     temperature: float = 0.7,
+    enable_checkpointing: Optional[bool] = None,
+    checkpoint_db_path: Optional[str] = None,
 ) -> Any:
     """
     Create a DeepAgent with OpenAI.
@@ -26,6 +29,10 @@ def create_agent(
     Args:
         model: Specific model name. If None, uses default: gpt-4o
         temperature: Temperature for the model (0.0-1.0)
+        enable_checkpointing: Enable conversation memory via checkpointing.
+                            If None, reads from ENABLE_CHECKPOINTING env var (default: False)
+        checkpoint_db_path: Path to SQLite checkpoint database.
+                           If None, reads from CHECKPOINT_DB_PATH env var (default: checkpoints.db)
 
     Returns:
         Configured deep agent instance
@@ -46,8 +53,25 @@ def create_agent(
         api_key=api_key,
     )
 
+    # Determine if checkpointing should be enabled
+    if enable_checkpointing is None:
+        enable_checkpointing = os.getenv("ENABLE_CHECKPOINTING", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # Create checkpointer if enabled
+    checkpointer = None
+    if enable_checkpointing:
+        db_path = checkpoint_db_path or os.getenv(
+            "CHECKPOINT_DB_PATH", "checkpoints.db"
+        )
+        checkpointer = SqliteSaver.from_conn_string(db_path)
+        print(f"✓ Checkpointing enabled: {db_path}")
+
     # Create and return the deep agent
-    return create_deep_agent(model=llm)
+    return create_deep_agent(model=llm, checkpointer=checkpointer)
 
 
 def run_agent_task(task: str, model: Optional[str] = None) -> dict:

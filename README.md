@@ -87,6 +87,92 @@ agent = create_agent(model="gpt-4o", temperature=0.5)
 response = agent.invoke({"messages": [{"role": "user", "content": "Your task here"}]})
 ```
 
+## Conversation Memory (Checkpointing)
+
+This project supports **conversation memory** via LangGraph checkpointing, allowing agents to remember context across multiple queries in the same session.
+
+### Enabling Checkpointing
+
+Enable checkpointing in your `.env` file:
+
+```bash
+ENABLE_CHECKPOINTING=true
+CHECKPOINT_DB_PATH=checkpoints.db  # Optional, defaults to checkpoints.db
+```
+
+Or enable it programmatically:
+
+```python
+from openai_langchain_deepagent.agent import create_agent
+
+# Create agent with checkpointing enabled
+agent = create_agent(enable_checkpointing=True)
+```
+
+### Using Conversation Sessions
+
+Use a `thread_id` to maintain conversation context:
+
+```python
+import uuid
+
+# Create a unique session ID
+thread_id = f"user-{uuid.uuid4().hex[:8]}"
+config = {"configurable": {"thread_id": thread_id}}
+
+# First query
+result1 = agent.invoke(
+    {"messages": [{"role": "user", "content": "I'm planning a trip to Paris"}]},
+    config=config
+)
+
+# Agent remembers the previous context!
+result2 = agent.invoke(
+    {"messages": [{"role": "user", "content": "What should I pack?"}]},
+    config=config
+)
+```
+
+### Running the Memory Demo
+
+Run the conversation memory example:
+
+```bash
+uv run python examples/conversation_with_memory.py
+```
+
+This demonstrates a multi-turn conversation where the agent remembers context from previous queries.
+
+### Managing Sessions
+
+Use session utilities to manage conversation history:
+
+```python
+from openai_langchain_deepagent.session_utils import (
+    list_active_sessions,
+    get_session_info,
+    clear_session,
+)
+
+# List all active sessions
+sessions = list_active_sessions()
+print(f"Active sessions: {sessions}")
+
+# Get session information
+info = get_session_info("user-abc123")
+print(f"Session has {info['checkpoint_count']} checkpoints")
+
+# Clear a specific session
+clear_session("user-abc123")
+```
+
+### Checkpoint Persistence
+
+- Checkpoints are stored in SQLite database (default: `checkpoints.db`)
+- Sessions persist across agent restarts
+- Different `thread_id` values create isolated conversations
+- Each checkpoint includes full conversation state
+
 ## Phoenix Observability
 
 This project includes **automatic Phoenix instrumentation** for observability and tracing of your DeepAgent executions.
@@ -227,16 +313,20 @@ ruff format .
 │       ├── __init__.py
 │       ├── main.py              # Main entry point
 │       ├── agent.py             # DeepAgent implementation
-│       └── instrumentation.py   # Phoenix observability setup
+│       ├── instrumentation.py   # Phoenix observability setup
+│       └── session_utils.py     # Session/checkpoint management utilities
 ├── tests/
 │   ├── __init__.py
 │   ├── test_main.py
-│   └── test_agent.py            # DeepAgent tests
+│   ├── test_agent.py            # DeepAgent tests
+│   └── test_checkpointing.py    # Checkpointing tests
 ├── examples/
-│   └── basic_agent.py           # Example usage
+│   ├── basic_agent.py           # Basic agent example
+│   └── conversation_with_memory.py  # Conversation memory demo
 ├── .env.example                 # Example environment variables
 ├── docker-compose.yml           # Phoenix observability service
 ├── pyproject.toml               # Project configuration
+├── checkpoints.db               # SQLite checkpoint database (created at runtime)
 └── README.md
 ```
 
