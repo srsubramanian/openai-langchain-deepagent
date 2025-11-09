@@ -267,7 +267,20 @@ def run_query_in_session(
             span.set_attribute(
                 "session.query_number", session_state["total_queries"] + 1
             )
-            span.set_attribute("query.text", query[:200])  # Truncate long queries
+
+            # Add input message in Phoenix-compatible format (OpenInference semantic conventions)
+            span.set_attribute("input.value", query)
+            span.set_attribute("input.mime_type", "text/plain")
+
+            # Add message content for Phoenix UI
+            span.add_event(
+                "user_message",
+                attributes={
+                    "message.role": "user",
+                    "message.content": query,
+                    "session.query_number": session_state["total_queries"] + 1,
+                },
+            )
 
             # Log session state BEFORE query (Option #4: State Snapshots)
             snapshot_before = create_session_snapshot(session_state)
@@ -276,13 +289,25 @@ def run_query_in_session(
             # Execute query
             response_text, updated_state = execute_query()
 
+            # Add output message in Phoenix-compatible format
+            span.set_attribute("output.value", response_text)
+            span.set_attribute("output.mime_type", "text/plain")
+
+            # Add assistant message for Phoenix UI
+            span.add_event(
+                "assistant_message",
+                attributes={
+                    "message.role": "assistant",
+                    "message.content": response_text,
+                },
+            )
+
             # Log session state AFTER query
             snapshot_after = create_session_snapshot(updated_state)
             span.add_event("session_snapshot_after", attributes=snapshot_after)
 
             # Add response metadata
             span.set_attribute("response.length", len(response_text))
-            span.set_attribute("response.preview", response_text[:200])
 
             return response_text, updated_state
     else:

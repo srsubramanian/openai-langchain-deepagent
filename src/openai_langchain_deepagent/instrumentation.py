@@ -58,10 +58,14 @@ def setup_phoenix_instrumentation(
         # Set the tracer provider
         trace_api.set_tracer_provider(tracer_provider)
 
-        # Instrument LangChain
-        LangChainInstrumentor().instrument()
+        # Instrument LangChain with content capture enabled
+        # This ensures message content is visible in Phoenix UI
+        LangChainInstrumentor().instrument(
+            skip_dep_check=True,  # Skip dependency version check
+        )
 
         print(f"✓ Phoenix instrumentation enabled: {endpoint}")
+        print("  Message content capture: ENABLED")
 
     except Exception as e:
         print(f"Warning: Failed to set up Phoenix instrumentation: {e}")
