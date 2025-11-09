@@ -1,13 +1,14 @@
-"""DeepAgent implementation using LangChain DeepAgents library with OpenAI."""
+"""LangChain Agent implementation with OpenAI and session memory."""
 
 import os
 import sqlite3
-from typing import Any, Optional
+from typing import Any, List, Optional
 
-from deepagents import create_deep_agent
 from dotenv import load_dotenv
+from langchain.tools import Tool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.prebuilt import create_react_agent
 
 from .instrumentation import setup_phoenix_instrumentation
 
@@ -18,14 +19,43 @@ load_dotenv()
 setup_phoenix_instrumentation()
 
 
+def _get_default_tools() -> List[Tool]:
+    """
+    Get default tools for the agent.
+
+    Returns a basic set of tools. You can extend this list with custom tools
+    for your merchant advisory use case.
+
+    Returns:
+        List of LangChain Tool objects
+    """
+    # Example tool: Calculator
+    def calculate(expression: str) -> str:
+        """Evaluate a mathematical expression. Input should be a valid Python expression."""
+        try:
+            result = eval(expression)
+            return str(result)
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    calculator_tool = Tool(
+        name="Calculator",
+        func=calculate,
+        description="Useful for performing mathematical calculations. Input should be a valid Python mathematical expression like '2 + 2' or '10 * 5'."
+    )
+
+    return [calculator_tool]
+
+
 def create_agent(
     model: Optional[str] = None,
     temperature: float = 0.7,
     enable_checkpointing: Optional[bool] = None,
     checkpoint_db_path: Optional[str] = None,
+    tools: Optional[List[Tool]] = None,
 ) -> Any:
     """
-    Create a DeepAgent with OpenAI.
+    Create a LangChain ReAct agent with OpenAI.
 
     Args:
         model: Specific model name. If None, uses default: gpt-4o
@@ -34,9 +64,10 @@ def create_agent(
                             If None, reads from ENABLE_CHECKPOINTING env var (default: False)
         checkpoint_db_path: Path to SQLite checkpoint database.
                            If None, reads from CHECKPOINT_DB_PATH env var (default: checkpoints.db)
+        tools: List of tools for the agent. If None, uses default tools.
 
     Returns:
-        Configured deep agent instance
+        Configured LangGraph agent (compiled graph)
 
     Raises:
         ValueError: If OPENAI_API_KEY is missing
@@ -53,6 +84,9 @@ def create_agent(
         temperature=temperature,
         api_key=api_key,
     )
+
+    # Use provided tools or default tools
+    agent_tools = tools if tools is not None else _get_default_tools()
 
     # Determine if checkpointing should be enabled
     if enable_checkpointing is None:
@@ -73,13 +107,13 @@ def create_agent(
         checkpointer = SqliteSaver(conn)
         print(f"✓ Checkpointing enabled: {db_path}")
 
-    # Create and return the deep agent
-    return create_deep_agent(model=llm, checkpointer=checkpointer)
+    # Create and return the ReAct agent using LangGraph's prebuilt
+    return create_react_agent(llm, agent_tools, checkpointer=checkpointer)
 
 
 def run_agent_task(task: str, model: Optional[str] = None) -> dict:
     """
-    Run a task with a DeepAgent using OpenAI.
+    Run a task with a LangChain agent using OpenAI.
 
     Args:
         task: The task description for the agent to execute
@@ -89,8 +123,8 @@ def run_agent_task(task: str, model: Optional[str] = None) -> dict:
         Dictionary containing the agent's response and execution details
 
     Example:
-        >>> result = run_agent_task("Write a hello world function in Python")
-        >>> print(result['output'])
+        >>> result = run_agent_task("Calculate 25 * 4")
+        >>> print(result['messages'][-1].content)
     """
     agent = create_agent(model=model)
 
@@ -104,9 +138,10 @@ def create_agent_with_session_memory(
     model: Optional[str] = None,
     temperature: float = 0.7,
     checkpoint_db_path: Optional[str] = None,
+    tools: Optional[List[Tool]] = None,
 ) -> Any:
     """
-    Create a DeepAgent with session memory (checkpointing always enabled).
+    Create a LangChain agent with session memory (checkpointing always enabled).
 
     This is a convenience function for Layer 1 session memory that ensures
     checkpointing is enabled.
@@ -116,9 +151,10 @@ def create_agent_with_session_memory(
         temperature: Temperature for the model (0.0-1.0)
         checkpoint_db_path: Path to SQLite checkpoint database.
                            If None, reads from CHECKPOINT_DB_PATH env var (default: checkpoints.db)
+        tools: List of tools for the agent. If None, uses default tools.
 
     Returns:
-        Configured deep agent instance with checkpointing enabled
+        Configured LangChain agent with checkpointing enabled
 
     Example:
         >>> agent = create_agent_with_session_memory()
@@ -129,6 +165,7 @@ def create_agent_with_session_memory(
         temperature=temperature,
         enable_checkpointing=True,
         checkpoint_db_path=checkpoint_db_path,
+        tools=tools,
     )
 
 
@@ -209,7 +246,7 @@ def run_query_in_session(
     Phoenix observability.
 
     Args:
-        agent: The DeepAgent instance
+        agent: The LangChain agent instance (LangGraph compiled graph)
         thread_id: Thread ID for this session
         session_state: Current session state
         query: User query to execute
@@ -316,7 +353,7 @@ def run_query_in_session(
 
 if __name__ == "__main__":
     # Example usage
-    example_task = "Create a simple Python function that adds two numbers"
+    example_task = "Calculate 15 * 23 using the calculator tool"
 
     print(f"Running task: {example_task}\n")
     print("=" * 60)
@@ -325,4 +362,7 @@ if __name__ == "__main__":
 
     print("\nAgent Response:")
     print("=" * 60)
-    print(result.get("output", result))
+    if result.get("messages"):
+        print(result["messages"][-1].content)
+    else:
+        print(result)

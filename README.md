@@ -1,21 +1,23 @@
-# openai-langchain-deepagent
+# openai-langchain-agent
 
-A Python project demonstrating LangChain DeepAgents with OpenAI integration.
+A Python project demonstrating LangChain Agents with OpenAI integration, featuring Layer 1 Session Memory for merchant conversations.
 
 ## About
 
-This project showcases the [LangChain DeepAgents](https://docs.langchain.com/oss/python/deepagents/overview) library, which enables building autonomous agents capable of:
+This project showcases [LangChain](https://docs.langchain.com/oss/python/langchain/agents) agents using LangGraph's `create_react_agent`, demonstrating:
 
-- **Complex Task Planning**: Break down tasks into manageable steps with built-in planning tools
-- **File System Management**: Handle large contexts using filesystem tools (read, write, edit files)
-- **Subagent Spawning**: Create specialized agents for complex, multi-step workflows
-- **OpenAI Integration**: Powered by OpenAI's GPT models
+- **ReAct Agents**: Reasoning and Acting agents with tool support
+- **Session Memory**: Layer 1 session management for single-merchant conversations
+- **Smart Caching**: TTL-based caching for merchant data
+- **Phoenix Observability**: Full OpenTelemetry tracing for LLM operations
+- **Checkpointing**: Persistent conversation memory via LangGraph
+- **OpenAI Integration**: Powered by OpenAI's GPT-4o
 
 The project uses [uv](https://github.com/astral-sh/uv) for fast dependency management.
 
 ## Prerequisites
 
-- Python 3.11 or higher (required by deepagents)
+- Python 3.11 or higher
 - uv (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - [OpenAI API key](https://platform.openai.com/api-keys)
 - Docker and Docker Compose (optional, for Phoenix observability)
@@ -65,26 +67,27 @@ After installing the project, run the main module:
 python -m openai_langchain_deepagent.main
 ```
 
-### Using DeepAgents
+### Using LangChain Agents
 
-Run the example demonstrating DeepAgent capabilities:
+Run the example demonstrating agent capabilities:
 
 ```bash
 uv run python examples/basic_agent.py
 ```
 
-Or use DeepAgents in your own code:
+Or use agents in your own code:
 
 ```python
 from openai_langchain_deepagent.agent import create_agent, run_agent_task
 
-# Quick usage
-result = run_agent_task("Write a Python function to sort a list")
-print(result)
+# Quick usage with tools (includes Calculator by default)
+result = run_agent_task("Calculate 123 * 456")
+print(result['messages'][-1].content)
 
 # Advanced usage with custom configuration
 agent = create_agent(model="gpt-4o", temperature=0.5)
 response = agent.invoke({"messages": [{"role": "user", "content": "Your task here"}]})
+print(response['messages'][-1].content)
 ```
 
 ## Conversation Memory (Checkpointing)

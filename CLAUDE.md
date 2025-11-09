@@ -1,17 +1,17 @@
-# OpenAI LangChain DeepAgent Project - Context for Claude
+# OpenAI LangChain Agent Project - Context for Claude
 
 ## Project Overview
 
-**Purpose**: A Python project demonstrating LangChain DeepAgents with OpenAI integration, featuring Layer 1 Session Memory for single-merchant conversations and Phoenix observability.
+**Purpose**: A Python project demonstrating LangChain Agents with OpenAI integration, featuring Layer 1 Session Memory for single-merchant conversations and Phoenix observability.
 
 **Package Manager**: UV (modern, fast alternative to pip)
 
 **Python Version**: 3.11+
 
 **Key Technologies**:
-- LangChain DeepAgents (autonomous agents)
+- LangChain (standard agents framework)
+- LangGraph (ReAct agents with checkpointing/memory)
 - OpenAI GPT-4o
-- LangGraph (checkpointing/memory)
 - Phoenix (Arize Phoenix for LLM observability)
 - SQLite (checkpoints and Phoenix data)
 - OpenTelemetry (tracing)
@@ -23,12 +23,10 @@
 ### Session 1: Foundation
 1. Created UV Python starter project
 2. Set default git branch to `main`
-3. Added LangChain DeepAgents integration with OpenAI
+3. Added LangChain integration with OpenAI (initially used DeepAgents)
 
-### Session 2: Fixes and Refinements
-- Fixed import: `from deepagents import create_deep_agent` (not `DeepAgent` class)
-- Fixed parameter: `create_deep_agent(model=...)` (not `llm=`)
-- Updated Python requirement from 3.8 to 3.11 (deepagents requirement)
+### Session 2: Fixes and Refinements (Historical - DeepAgents era)
+- Updated Python requirement to 3.11
 - Removed Anthropic/Claude support (OpenAI only)
 
 ### Session 3: Phoenix Observability
@@ -65,6 +63,15 @@
 - Retained all Layer 1 features (topics, recommendations, caching, notes)
 - Updated all code, tests, examples, and documentation
 - Resolves Phoenix message visibility issues by using only thread_id
+
+### Session 9: Migration to Standard LangChain Agents
+- Migrated from DeepAgents to standard LangChain agents
+- Now using `create_react_agent` from LangGraph's prebuilt agents
+- Added tools support (default: Calculator tool)
+- Updated dependencies: removed `deepagents`, added `langchain` and `langgraph`
+- All session memory features remain intact
+- Compatible with same invoke interface and checkpointing
+- Updated all examples, tests, and documentation
 
 ---
 
@@ -230,17 +237,17 @@ conn = sqlite3.connect(db_path, check_same_thread=False)
 checkpointer = SqliteSaver(conn)
 ```
 
-### 2. create_deep_agent Parameters
+### 2. LangGraph ReAct Agent
 
-**WRONG** ❌:
+Using LangGraph's prebuilt `create_react_agent`:
 ```python
-create_deep_agent(llm=llm)  # Wrong parameter name
+from langgraph.prebuilt import create_react_agent
+
+# Create agent with LLM, tools, and optional checkpointer
+agent = create_react_agent(llm, tools, checkpointer=checkpointer)
 ```
 
-**CORRECT** ✅:
-```python
-create_deep_agent(model=llm)  # Correct
-```
+The agent is a compiled LangGraph graph that works with the same invoke interface.
 
 ### 3. Merchant ID Normalization
 
@@ -554,23 +561,27 @@ assert data is None
 
 ## Recent Changes to Be Aware Of
 
-- **Session 8 (Current)**: Removed dual-ID system (ses_ session ID)
+- **Session 9 (Current)**: Migrated to standard LangChain Agents
+  - Replaced `deepagents` with `langchain` and `langgraph`
+  - Now using `create_react_agent` from LangGraph's prebuilt
+  - Added tools support (default: Calculator)
+  - All session memory features intact
+  - Same invoke interface and checkpointing
+- **Session 8**: Removed dual-ID system (ses_ session ID)
   - Now using only `thread_id` as session identifier
-  - Updated all code, tests, examples, and documentation
-  - Resolves Phoenix message visibility issues
-- Last 4 commits regarding Phoenix message debugging were removed per user request
-- Session state TypedDict no longer has `session_id` field
-- Phoenix tracing uses `session.thread_id` instead of `session.id`
+  - Session state TypedDict no longer has `session_id` field
+  - Phoenix tracing uses `session.thread_id` instead of `session.id`
 
 ---
 
 ## Contact & Resources
 
-- [LangChain DeepAgents Docs](https://docs.langchain.com/oss/python/deepagents/overview)
+- [LangChain Agents Docs](https://docs.langchain.com/oss/python/langchain/agents)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [Phoenix Documentation](https://docs.arize.com/phoenix)
 - [OpenInference Semantic Conventions](https://github.com/Arize-ai/openinference)
 
 ---
 
-**Last Updated**: 2025-01-09 (Session 8: Simplified session management)
+**Last Updated**: 2025-01-09 (Session 9: Migration to standard LangChain Agents)
 **Status**: Production-ready

@@ -12,16 +12,19 @@ class TestCreateAgent:
     """Tests for create_agent function."""
 
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
-    @patch("openai_langchain_deepagent.agent.create_deep_agent")
-    def test_create_agent_default(self, mock_create_deep_agent, mock_chat_openai):
+    @patch("openai_langchain_deepagent.agent.create_react_agent")
+    @patch("openai_langchain_deepagent.agent._get_default_tools")
+    def test_create_agent_default(self, mock_get_tools, mock_create_react_agent, mock_chat_openai):
         """Test creating an agent with default parameters."""
         # Mock environment variable
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            # Mock the LLM and deep agent
+            # Mock the LLM and agent
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_tools = [MagicMock()]
+            mock_get_tools.return_value = mock_tools
             mock_agent = MagicMock()
-            mock_create_deep_agent.return_value = mock_agent
+            mock_create_react_agent.return_value = mock_agent
 
             # Create agent
             agent = create_agent()
@@ -33,17 +36,19 @@ class TestCreateAgent:
             assert call_kwargs["temperature"] == 0.7
             assert call_kwargs["api_key"] == "test-key"
 
-            # Verify create_deep_agent was called with the model
-            mock_create_deep_agent.assert_called_once_with(model=mock_llm)
+            # Verify create_react_agent was called with the model and tools
+            mock_create_react_agent.assert_called_once_with(mock_llm, mock_tools, checkpointer=None)
             assert agent == mock_agent
 
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
-    @patch("openai_langchain_deepagent.agent.create_deep_agent")
-    def test_create_agent_custom_model(self, mock_create_deep_agent, mock_chat_openai):
+    @patch("openai_langchain_deepagent.agent.create_react_agent")
+    @patch("openai_langchain_deepagent.agent._get_default_tools")
+    def test_create_agent_custom_model(self, mock_get_tools, mock_create_react_agent, mock_chat_openai):
         """Test creating an agent with custom model."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_get_tools.return_value = []
 
             create_agent(model="gpt-4-turbo")
 
@@ -51,12 +56,14 @@ class TestCreateAgent:
             assert call_kwargs["model"] == "gpt-4-turbo"
 
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
-    @patch("openai_langchain_deepagent.agent.create_deep_agent")
-    def test_create_agent_custom_temperature(self, mock_create_deep_agent, mock_chat_openai):
+    @patch("openai_langchain_deepagent.agent.create_react_agent")
+    @patch("openai_langchain_deepagent.agent._get_default_tools")
+    def test_create_agent_custom_temperature(self, mock_get_tools, mock_create_react_agent, mock_chat_openai):
         """Test creating an agent with custom temperature."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_get_tools.return_value = []
 
             create_agent(temperature=0.5)
 

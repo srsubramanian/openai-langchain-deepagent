@@ -12,7 +12,7 @@ from openai_langchain_deepagent.session_utils import (
 def main():
     """Run a multi-turn conversation demonstrating memory."""
     print("=" * 70)
-    print("Conversation with Memory - DeepAgent Checkpointing Demo")
+    print("Conversation with Memory - LangChain Agent Checkpointing Demo")
     print("=" * 70)
 
     # Create agent with checkpointing enabled

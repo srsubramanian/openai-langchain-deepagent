@@ -1,12 +1,13 @@
 [project]
 name = "openai-langchain-deepagent"
 version = "0.1.0"
-description = "A Python project demonstrating LangChain DeepAgents with OpenAI integration"
+description = "A Python project demonstrating LangChain Agents with OpenAI integration and session memory"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "deepagents>=0.2.0",
-    "langchain-openai>=0.1.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langgraph>=0.2.0",
     "python-dotenv>=1.0.0",
     "openinference-instrumentation-langchain>=0.1.0",
     "opentelemetry-sdk>=1.20.0",
