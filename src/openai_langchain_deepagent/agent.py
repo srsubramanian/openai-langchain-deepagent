@@ -202,9 +202,11 @@ def run_query_in_session(
     query: str,
 ):
     """
-    Run a query within an existing merchant session.
+    Run a query within an existing merchant session with Phoenix tracing.
 
     Executes the query, updates session state, and returns both response and updated state.
+    Automatically adds session metadata and state snapshots to OpenTelemetry traces for
+    Phoenix observability.
 
     Args:
         agent: The DeepAgent instance
@@ -224,19 +226,68 @@ def run_query_in_session(
         ... )
         >>> print(response)
     """
-    from .session_manager import increment_query_count
+    from .session_manager import create_session_snapshot, increment_query_count
 
-    # Update query count and timestamp
-    updated_state = increment_query_count(session_state)
+    try:
+        from opentelemetry import trace
 
-    # Execute query with thread_id for memory
-    config = {"configurable": {"thread_id": thread_id}}
-    result = agent.invoke({"messages": [{"role": "user", "content": query}]}, config)
+        tracer = trace.get_tracer(__name__)
+    except ImportError:
+        # OpenTelemetry not available, proceed without tracing
+        tracer = None
 
-    # Extract response
-    response_text = result["messages"][-1].content if result.get("messages") else ""
+    # Helper to safely execute with or without tracing
+    def execute_query():
+        # Update query count and timestamp BEFORE query
+        updated_state = increment_query_count(session_state)
 
-    return response_text, updated_state
+        # Execute query with thread_id for memory
+        config = {"configurable": {"thread_id": thread_id}}
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": query}]}, config
+        )
+
+        # Extract response
+        response_text = result["messages"][-1].content if result.get("messages") else ""
+
+        return response_text, updated_state
+
+    # Execute with tracing if available
+    if tracer:
+        with tracer.start_as_current_span("merchant_query") as span:
+            # Add session metadata (Option #1: Session Metadata in Spans)
+            span.set_attribute("session.id", session_state["session_id"])
+            span.set_attribute("session.thread_id", thread_id)
+            span.set_attribute("session.advisor_id", session_state["advisor_id"])
+            span.set_attribute("merchant.id", session_state["merchant_id"])
+            span.set_attribute(
+                "merchant.name", session_state.get("merchant_name") or ""
+            )
+            span.set_attribute("merchant.segment", session_state.get("segment") or "")
+            span.set_attribute(
+                "session.query_number", session_state["total_queries"] + 1
+            )
+            span.set_attribute("query.text", query[:200])  # Truncate long queries
+
+            # Log session state BEFORE query (Option #4: State Snapshots)
+            snapshot_before = create_session_snapshot(session_state)
+            span.add_event("session_snapshot_before", attributes=snapshot_before)
+
+            # Execute query
+            response_text, updated_state = execute_query()
+
+            # Log session state AFTER query
+            snapshot_after = create_session_snapshot(updated_state)
+            span.add_event("session_snapshot_after", attributes=snapshot_after)
+
+            # Add response metadata
+            span.set_attribute("response.length", len(response_text))
+            span.set_attribute("response.preview", response_text[:200])
+
+            return response_text, updated_state
+    else:
+        # No tracing available, execute without telemetry
+        return execute_query()
 
 
 if __name__ == "__main__":

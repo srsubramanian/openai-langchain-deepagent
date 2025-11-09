@@ -341,6 +341,86 @@ uv run pytest tests/test_session_memory.py -v
 uv run pytest tests/test_session_memory.py::TestSessionManager::test_cache_expiration -v
 ```
 
+### Phoenix Tracing for Sessions
+
+Layer 1 Session Memory includes **automatic Phoenix tracing** for complete observability of multi-turn sessions.
+
+**What gets traced:**
+
+1. **Session Metadata** (on every span):
+   - `session.id` - Unique session identifier
+   - `session.thread_id` - LangGraph thread ID
+   - `session.advisor_id` - Advisor running the session
+   - `merchant.id`, `merchant.name`, `merchant.segment` - Merchant context
+   - `session.query_number` - Query sequence number
+
+2. **Session State Snapshots** (before/after each query):
+   - `session.total_queries` - Total queries in session
+   - `session.duration_seconds` - Session duration
+   - `session.topics_count` - Number of topics discussed
+   - `session.topics` - List of topics
+   - `session.recommendations_count` - Number of recommendations
+   - `session.cached_data_types` - What's in cache
+   - `cache_age_{data_type}` - Age of each cached item
+
+3. **Cache Performance** (on cache lookups):
+   - `cache.data_type` - Type of data being accessed
+   - `cache.hit` - true/false
+   - `cache.miss_reason` - "not_found" or "expired"
+   - `cache.age_seconds` - Age of cached data
+   - `cache.ttl_seconds` - TTL for this data type
+
+**Running the Phoenix tracing demo:**
+
+```bash
+# Start Phoenix
+docker compose up -d
+
+# Run the tracing demo
+uv run python examples/session_with_phoenix_tracing.py
+
+# Open Phoenix UI
+open http://localhost:6006
+```
+
+**Viewing traces in Phoenix:**
+
+```python
+# Filter by session ID to see all queries
+session.id = "ses_20250109_143022_abc123de"
+
+# Find sessions with recommendations
+session.recommendations_count > 0
+
+# Analyze cache performance
+cache.hit = false
+
+# Group by merchant
+merchant.id = "mch_789456"
+```
+
+**Timeline view in Phoenix:**
+
+```
+14:30:00 - merchant_query [Query 1]
+  ├─ 📸 session_snapshot_before (queries=0, topics=[])
+  ├─ 🤖 LLM Call
+  └─ 📸 session_snapshot_after (queries=1, topics=[])
+
+14:32:15 - merchant_query [Query 2]
+  ├─ 📸 session_snapshot_before (queries=1, topics=["decline_rates"])
+  ├─ 💾 cache_lookup (profile: HIT, age=135s)
+  ├─ 🤖 LLM Call
+  └─ 📸 session_snapshot_after (queries=2, recommendations=1)
+
+14:35:42 - merchant_query [Query 3]
+  ├─ 📸 session_snapshot_before (queries=2, topics=["decline_rates", "volume"])
+  ├─ 💾 cache_lookup (profile: HIT, age=342s)
+  ├─ 💾 cache_lookup (transactions: MISS, expired)
+  ├─ 🤖 LLM Call
+  └─ 📸 session_snapshot_after (queries=3)
+```
+
 ## Phoenix Observability
 
 This project includes **automatic Phoenix instrumentation** for observability and tracing of your DeepAgent executions.

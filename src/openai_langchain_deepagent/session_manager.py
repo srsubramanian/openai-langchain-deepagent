@@ -152,7 +152,7 @@ def get_cached_data(
     cache_config: CacheConfig = DEFAULT_CACHE_CONFIG,
 ) -> Optional[dict]:
     """
-    Get cached data if not expired.
+    Get cached data if not expired, with Phoenix tracing.
 
     Args:
         state: Current session state
@@ -168,24 +168,57 @@ def get_cached_data(
         >>> time.sleep(1801)
         >>> get_cached_data(state, "profile")  # Returns None (expired)
     """
-    # Check if data exists
-    if data_type not in state["cached_data"]:
-        return None
+    try:
+        from opentelemetry import trace
 
-    # Get TTL for this data type
-    ttl_key = f"{data_type}_ttl_seconds"
-    ttl = cache_config.get(ttl_key, 300)  # Default 5 minutes
+        tracer = trace.get_tracer(__name__)
+        span = tracer.start_span("cache_lookup")
+    except (ImportError, Exception):
+        tracer = None
+        span = None
 
-    # Calculate age
-    cached_time = datetime.fromisoformat(state["cached_at"][data_type])
-    current_time = datetime.now(timezone.utc)
-    age_seconds = (current_time - cached_time).total_seconds()
+    try:
+        # Add trace attributes
+        if span:
+            span.set_attribute("cache.data_type", data_type)
+            span.set_attribute("session.id", state.get("session_id", "unknown"))
 
-    # Check if expired
-    if age_seconds > ttl:
-        return None
+        # Check if data exists
+        if data_type not in state["cached_data"]:
+            if span:
+                span.set_attribute("cache.hit", False)
+                span.set_attribute("cache.miss_reason", "not_found")
+            return None
 
-    return state["cached_data"][data_type]
+        # Get TTL for this data type
+        ttl_key = f"{data_type}_ttl_seconds"
+        ttl = cache_config.get(ttl_key, 300)  # Default 5 minutes
+
+        # Calculate age
+        cached_time = datetime.fromisoformat(state["cached_at"][data_type])
+        current_time = datetime.now(timezone.utc)
+        age_seconds = (current_time - cached_time).total_seconds()
+
+        if span:
+            span.set_attribute("cache.age_seconds", age_seconds)
+            span.set_attribute("cache.ttl_seconds", ttl)
+
+        # Check if expired
+        if age_seconds > ttl:
+            if span:
+                span.set_attribute("cache.hit", False)
+                span.set_attribute("cache.miss_reason", "expired")
+            return None
+
+        # Cache hit!
+        if span:
+            span.set_attribute("cache.hit", True)
+
+        return state["cached_data"][data_type]
+
+    finally:
+        if span:
+            span.end()
 
 
 def add_topic(state: SessionState, topic: str) -> SessionState:
@@ -357,3 +390,61 @@ def validate_merchant_match(state: SessionState, merchant_id: str) -> bool:
         merchant_id = f"mch_{merchant_id}"
 
     return state["merchant_id"] == merchant_id
+
+
+def create_session_snapshot(state: SessionState) -> Dict:
+    """
+    Create a snapshot of current session state for OpenTelemetry tracing.
+
+    This snapshot is designed to be attached to OpenTelemetry spans as attributes
+    or events, providing visibility into session evolution in Phoenix.
+
+    Args:
+        state: Current session state
+
+    Returns:
+        Dictionary with session snapshot suitable for tracing
+
+    Example:
+        >>> from opentelemetry import trace
+        >>> snapshot = create_session_snapshot(state)
+        >>> span = trace.get_current_span()
+        >>> span.add_event("session_snapshot", attributes=snapshot)
+    """
+    started = datetime.fromisoformat(state["started_at"])
+    last_activity = datetime.fromisoformat(state["last_activity_at"])
+    duration_seconds = (last_activity - started).total_seconds()
+
+    # Calculate cache ages
+    cache_ages = {}
+    now = datetime.now(timezone.utc)
+    for data_type, cached_timestamp in state["cached_at"].items():
+        cached_at = datetime.fromisoformat(cached_timestamp)
+        age = (now - cached_at).total_seconds()
+        cache_ages[f"cache_age_{data_type}"] = age
+
+    snapshot = {
+        # Session metadata
+        "session.id": state["session_id"],
+        "session.advisor_id": state["advisor_id"],
+        "session.total_queries": state["total_queries"],
+        "session.duration_seconds": duration_seconds,
+        # Merchant context
+        "merchant.id": state["merchant_id"],
+        "merchant.name": state.get("merchant_name") or "",
+        "merchant.segment": state.get("segment") or "",
+        # Conversation tracking
+        "session.topics_count": len(state["topics_discussed"]),
+        "session.topics": ", ".join(state["topics_discussed"]),
+        "session.recommendations_count": len(state["recommendations"]),
+        "session.pending_questions_count": len(state["pending_questions"]),
+        "session.advisor_notes_count": len(state["advisor_notes"]),
+        # Cache state
+        "session.cached_data_types": ", ".join(state["cached_data"].keys()),
+        "session.cached_types_count": len(state["cached_data"]),
+    }
+
+    # Add cache ages
+    snapshot.update(cache_ages)
+
+    return snapshot
