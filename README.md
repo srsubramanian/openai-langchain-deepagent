@@ -151,14 +151,47 @@ To disable Phoenix instrumentation:
 PHOENIX_ENABLED=false
 ```
 
+### Data Persistence
+
+Phoenix data is automatically persisted using a Docker volume named `phoenix-data`. This means:
+- Your traces and metrics survive container restarts
+- Data persists even when you stop and start the container
+- You can safely restart or upgrade Phoenix without losing data
+
+To view volume information:
+```bash
+# List volumes
+docker volume ls
+
+# Inspect the Phoenix volume
+docker volume inspect openai-langchain-deepagent_phoenix-data
+```
+
 ### Stopping Phoenix
 
 ```bash
-# Stop Phoenix
+# Stop Phoenix (data is preserved)
 docker compose down
 
-# Stop and remove volumes
+# Stop and remove volumes (⚠️ deletes all Phoenix data)
 docker compose down -v
+```
+
+### Backing Up Phoenix Data
+
+To backup your Phoenix data:
+```bash
+# Create a backup directory
+mkdir -p backups
+
+# Backup Phoenix data
+docker run --rm -v openai-langchain-deepagent_phoenix-data:/data -v $(pwd)/backups:/backup alpine tar czf /backup/phoenix-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
+```
+
+To restore from backup:
+```bash
+# Restore Phoenix data
+docker run --rm -v openai-langchain-deepagent_phoenix-data:/data -v $(pwd)/backups:/backup alpine tar xzf /backup/phoenix-backup-YYYYMMDD-HHMMSS.tar.gz -C /data
 ```
 
 ## Development
