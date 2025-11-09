@@ -66,3 +66,101 @@ For users who need conversation memory and session management, refer to:
 - Examples:
   - `examples/conversation_with_memory.py`
   - `examples/single_merchant_session_demo.py`
+
+---
+
+## 2025-01-09: Document and Enhance TodoListMiddleware Support
+
+### Context
+User requested documentation about TodoListMiddleware referenced at https://docs.langchain.com/oss/python/langchain/middleware#to-do-list
+
+### Discovery
+Through research and inspection of the `deepagents` library, discovered that **TodoListMiddleware is already automatically included** when using `create_deep_agent()`. The project was already using this middleware without explicitly documenting it.
+
+### What is TodoListMiddleware?
+TodoListMiddleware is one of three middleware components automatically attached to deep agents:
+
+1. **TodoListMiddleware**: Provides `write_todos` tool for task planning
+   - Helps agents break down complex tasks into manageable steps
+   - Manages tasks with three states: `pending`, `in_progress`, `completed`
+   - Automatically used by the agent when tackling multi-step tasks
+
+2. **FilesystemMiddleware**: File operations for context management
+   - Tools: `write_file`, `read_file`, `edit_file`, `ls`, `glob_search`, `grep_search`
+   - Enables agents to work with files for reading code, writing reports, etc.
+
+3. **SubAgentMiddleware**: Spawning specialized sub-agents
+   - Tool: `call_subagent`
+   - Allows agents to delegate tasks to specialized sub-agents
+
+### Changes Made
+
+#### 1. Documentation Updates
+- Enhanced `create_agent()` docstring to document all three middleware components
+- Added inline comment noting that middleware is automatically included
+- Updated README with comprehensive "Built-in Middleware" section
+- Documented each middleware's purpose, tools, and use cases
+
+#### 2. New Functionality
+Created `create_agent_with_custom_middleware()` function for advanced use cases:
+```python
+def create_agent_with_custom_middleware(
+    model: Optional[str] = None,
+    temperature: float = 0.7,
+    middleware: Optional[list] = None,
+    system_prompt: Optional[str] = None,
+    enable_checkpointing: Optional[bool] = None,
+    checkpoint_db_path: Optional[str] = None,
+) -> Any:
+```
+
+This allows users to add custom middleware while retaining all default middleware functionality.
+
+#### 3. Example Code
+Created `examples/todo_middleware_demo.py` to demonstrate:
+- That `write_todos` tool is automatically available
+- How the agent uses the tool for complex, multi-step tasks
+- How to inspect available tools in a deep agent
+
+#### 4. Package Exports
+Updated `src/openai_langchain_deepagent/__init__.py` to export:
+- `create_agent`
+- `create_agent_with_custom_middleware` (new)
+- `create_agent_with_session_memory`
+- `run_agent_task`
+- `run_query_in_session`
+- `start_merchant_session`
+
+### Files Modified
+- `src/openai_langchain_deepagent/agent.py`
+  - Updated docstrings
+  - Added `create_agent_with_custom_middleware()` function
+- `src/openai_langchain_deepagent/__init__.py`
+  - Added exports for public API
+- `README.md`
+  - Added "Built-in Middleware" section
+  - Updated "Features" section to highlight middleware
+- `examples/todo_middleware_demo.py` (new)
+  - Demo of TodoListMiddleware in action
+
+### Key Insights
+
+1. **Already Enabled**: The project was already using TodoListMiddleware through `create_deep_agent()` but it wasn't documented
+2. **Automatic Behavior**: Agents automatically use `write_todos` when appropriate for complex tasks
+3. **Three Middleware Types**: TodoList, Filesystem, and SubAgent middleware all work together
+4. **Extensible**: Users can add custom middleware without losing default functionality
+
+### Testing
+Can be tested with:
+```bash
+uv run python examples/todo_middleware_demo.py
+```
+
+### Commit
+`acdaa25` - Add TodoListMiddleware documentation and custom middleware support
+
+### Benefits
+- Users now understand what middleware is included by default
+- Clear documentation of available tools and their purposes
+- Path for advanced users to add custom middleware
+- Example code showing the feature in action
