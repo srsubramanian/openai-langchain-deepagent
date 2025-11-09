@@ -81,6 +81,10 @@ def run_agent_task(task: str, model: Optional[str] = None) -> dict:
     """
     Run a task with a DeepAgent using OpenAI.
 
+    This is a simple, stateless function for one-off tasks. Checkpointing is
+    disabled by default. For session-based conversations with memory, use
+    start_merchant_session() and run_query_in_session() instead.
+
     Args:
         task: The task description for the agent to execute
         model: Optional specific model to use (default: gpt-4o)
@@ -92,7 +96,9 @@ def run_agent_task(task: str, model: Optional[str] = None) -> dict:
         >>> result = run_agent_task("Write a hello world function in Python")
         >>> print(result['output'])
     """
-    agent = create_agent(model=model)
+    # Explicitly disable checkpointing for this simple API
+    # Users wanting session memory should use start_merchant_session()
+    agent = create_agent(model=model, enable_checkpointing=False)
 
     # Execute the task
     result = agent.invoke({"messages": [{"role": "user", "content": task}]})
