@@ -24,13 +24,12 @@ def main():
     # Give the agent a complex, multi-step task
     # The agent should use the write_todos tool to plan and track progress
     task = """
-    Create a Python script that:
-    1. Reads a CSV file with sales data
-    2. Calculates total revenue by product category
-    3. Generates a bar chart visualization
-    4. Saves the chart as a PNG file
+    Plan the steps to create a simple Python calculator that:
+    1. Takes two numbers as input
+    2. Performs addition, subtraction, multiplication, and division
+    3. Displays the results
 
-    Please break this down into steps using your planning tools.
+    Just plan the steps - don't implement it yet.
     """
 
     print(f"Task: {task.strip()}")
