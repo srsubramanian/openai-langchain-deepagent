@@ -1,7 +1,6 @@
 """Session management functions for single-merchant conversations."""
 
 import re
-import uuid
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
@@ -25,6 +24,9 @@ def initialize_session_state(
     """
     Initialize a new session state for a merchant.
 
+    Session is identified by thread_id (merchant_{merchant_id}_{timestamp})
+    which is created by start_merchant_session().
+
     Args:
         advisor_id: ID of the advisor starting the session
         merchant_id: Merchant ID for this session
@@ -36,23 +38,17 @@ def initialize_session_state(
 
     Example:
         >>> state = initialize_session_state("adv_001", "mch_789456", "TechRetail", "mid_market")
-        >>> state["session_id"]  # Format: ses_20250109_143022_abc123de
+        >>> state["merchant_id"]  # "mch_789456"
     """
-    # Generate session ID: ses_YYYYMMDD_HHMMSS_{8_char_uuid}
-    now = datetime.now(timezone.utc)
-    timestamp = now.strftime("%Y%m%d_%H%M%S")
-    uuid_part = uuid.uuid4().hex[:8]
-    session_id = f"ses_{timestamp}_{uuid_part}"
-
     # Normalize merchant_id to have mch_ prefix
     if not merchant_id.startswith("mch_"):
         merchant_id = f"mch_{merchant_id}"
 
+    now = datetime.now(timezone.utc)
     iso_timestamp = now.isoformat()
 
     return SessionState(
         messages=[],
-        session_id=session_id,
         advisor_id=advisor_id,
         started_at=iso_timestamp,
         last_activity_at=iso_timestamp,
@@ -181,7 +177,6 @@ def get_cached_data(
         # Add trace attributes
         if span:
             span.set_attribute("cache.data_type", data_type)
-            span.set_attribute("session.id", state.get("session_id", "unknown"))
 
         # Check if data exists
         if data_type not in state["cached_data"]:
@@ -349,7 +344,6 @@ def get_session_summary(state: SessionState) -> Dict:
     duration_seconds = (last_activity - started).total_seconds()
 
     return {
-        "session_id": state["session_id"],
         "advisor_id": state["advisor_id"],
         "merchant_id": state["merchant_id"],
         "merchant_name": state["merchant_name"],
@@ -392,7 +386,7 @@ def validate_merchant_match(state: SessionState, merchant_id: str) -> bool:
     return state["merchant_id"] == merchant_id
 
 
-def create_session_snapshot(state: SessionState) -> Dict:
+def create_session_snapshot(state: SessionState, thread_id: str) -> Dict:
     """
     Create a snapshot of current session state for OpenTelemetry tracing.
 
@@ -401,13 +395,14 @@ def create_session_snapshot(state: SessionState) -> Dict:
 
     Args:
         state: Current session state
+        thread_id: Thread ID for this session (merchant_{merchant_id}_{timestamp})
 
     Returns:
         Dictionary with session snapshot suitable for tracing
 
     Example:
         >>> from opentelemetry import trace
-        >>> snapshot = create_session_snapshot(state)
+        >>> snapshot = create_session_snapshot(state, thread_id)
         >>> span = trace.get_current_span()
         >>> span.add_event("session_snapshot", attributes=snapshot)
     """
@@ -424,8 +419,8 @@ def create_session_snapshot(state: SessionState) -> Dict:
         cache_ages[f"cache_age_{data_type}"] = age
 
     snapshot = {
-        # Session metadata
-        "session.id": state["session_id"],
+        # Session metadata (using thread_id as identifier)
+        "session.thread_id": thread_id,
         "session.advisor_id": state["advisor_id"],
         "session.total_queries": state["total_queries"],
         "session.duration_seconds": duration_seconds,

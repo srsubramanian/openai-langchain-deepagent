@@ -33,8 +33,7 @@ def print_session_state(state: SessionState, detailed: bool = False) -> None:
     print("=" * 70)
 
     # Session metadata
-    print(f"\nSession ID:      {state['session_id']}")
-    print(f"Advisor ID:      {state['advisor_id']}")
+    print(f"\nAdvisor ID:      {state['advisor_id']}")
     print(
         f"Merchant:        {state['merchant_id']}"
         + (f" ({state['merchant_name']})" if state["merchant_name"] else "")
@@ -116,7 +115,6 @@ def export_session_summary(state: SessionState) -> Dict:
 
     return {
         # Session metadata
-        "session_id": state["session_id"],
         "advisor_id": state["advisor_id"],
         "started_at": state["started_at"],
         "last_activity_at": state["last_activity_at"],

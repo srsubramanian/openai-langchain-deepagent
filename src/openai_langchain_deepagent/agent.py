@@ -255,8 +255,7 @@ def run_query_in_session(
     # Execute with tracing if available
     if tracer:
         with tracer.start_as_current_span("merchant_query") as span:
-            # Add session metadata (Option #1: Session Metadata in Spans)
-            span.set_attribute("session.id", session_state["session_id"])
+            # Add session metadata (thread_id is the primary session identifier)
             span.set_attribute("session.thread_id", thread_id)
             span.set_attribute("session.advisor_id", session_state["advisor_id"])
             span.set_attribute("merchant.id", session_state["merchant_id"])
@@ -283,7 +282,7 @@ def run_query_in_session(
             )
 
             # Log session state BEFORE query (Option #4: State Snapshots)
-            snapshot_before = create_session_snapshot(session_state)
+            snapshot_before = create_session_snapshot(session_state, thread_id)
             span.add_event("session_snapshot_before", attributes=snapshot_before)
 
             # Execute query
@@ -303,7 +302,7 @@ def run_query_in_session(
             )
 
             # Log session state AFTER query
-            snapshot_after = create_session_snapshot(updated_state)
+            snapshot_after = create_session_snapshot(updated_state, thread_id)
             span.add_event("session_snapshot_after", attributes=snapshot_after)
 
             # Add response metadata

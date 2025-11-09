@@ -38,14 +38,6 @@ class TestSessionManager:
             segment="mid_market",
         )
 
-        # Check session ID format: ses_YYYYMMDD_HHMMSS_{8char_uuid}
-        assert state["session_id"].startswith("ses_")
-        parts = state["session_id"].split("_")
-        assert len(parts) == 4  # ses, YYYYMMDD, HHMMSS, uuid
-        assert len(parts[1]) == 8  # YYYYMMDD
-        assert len(parts[2]) == 6  # HHMMSS
-        assert len(parts[3]) == 8  # 8 char uuid
-
         # Check merchant_id normalization
         assert state["merchant_id"] == "mch_789456"
 
@@ -238,7 +230,6 @@ class TestSessionManager:
 
         summary = get_session_summary(state)
 
-        assert summary["session_id"] == state["session_id"]
         assert summary["advisor_id"] == "adv_001"
         assert summary["merchant_id"] == "mch_789456"
         assert summary["merchant_name"] == "TechRetail"
@@ -303,7 +294,6 @@ class TestSessionInspector:
         summary = export_session_summary(state)
 
         # Check all required fields
-        assert summary["session_id"] == state["session_id"]
         assert summary["advisor_id"] == "adv_001"
         assert summary["merchant_id"] == "mch_789456"
         assert summary["merchant_name"] == "TechRetail"

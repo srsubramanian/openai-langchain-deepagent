@@ -16,8 +16,7 @@ class SessionState(TypedDict):
     # LangGraph built-in message handling
     messages: Annotated[List, add_messages]
 
-    # Session metadata
-    session_id: str
+    # Session metadata (uses thread_id as identifier)
     advisor_id: str
     started_at: str  # ISO timestamp
     last_activity_at: str  # ISO timestamp
