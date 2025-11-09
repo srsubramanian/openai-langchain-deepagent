@@ -583,19 +583,80 @@ ruff format .
 └── README.md
 ```
 
+## Built-in Middleware
+
+All agents created with `create_agent()` automatically include the following middleware:
+
+### TodoListMiddleware (Task Planning)
+- **Tool**: `write_todos`
+- **Purpose**: Helps agents plan and track multi-step tasks
+- **Usage**: The agent automatically uses this tool to break down complex tasks into manageable steps
+- **States**: `pending`, `in_progress`, `completed`
+
+### FilesystemMiddleware (File Operations)
+- **Tools**: `write_file`, `read_file`, `edit_file`, `ls`, `glob_search`, `grep_search`
+- **Purpose**: Enables agents to work with files for context management
+- **Use Cases**: Reading code, writing reports, managing large contexts
+
+### SubAgentMiddleware (Specialized Agents)
+- **Tool**: `call_subagent`
+- **Purpose**: Spawn specialized sub-agents for complex, multi-step workflows
+- **Use Cases**: Delegating specialized tasks to focused agents
+
+### Using TodoListMiddleware
+
+Run the demo to see the TodoListMiddleware in action:
+
+```bash
+uv run python examples/todo_middleware_demo.py
+```
+
+The agent will automatically use the `write_todos` tool to plan complex tasks:
+
+```python
+from openai_langchain_deepagent.agent import create_agent
+
+agent = create_agent()
+
+# Give the agent a complex task
+result = agent.invoke({
+    "messages": [{
+        "role": "user",
+        "content": "Create a Python data analysis pipeline with visualization"
+    }]
+})
+
+# The agent will use write_todos to break down the task into steps
+```
+
+### Custom Middleware
+
+To add your own middleware:
+
+```python
+from openai_langchain_deepagent.agent import create_agent_with_custom_middleware
+from langchain.agents.middleware import LoggingMiddleware
+
+agent = create_agent_with_custom_middleware(
+    middleware=[LoggingMiddleware()],
+    system_prompt="You are a specialized data analysis assistant"
+)
+```
+
 ## Features
 
 ### DeepAgent Capabilities
 
 This project demonstrates:
 
-1. **Planning**: Agents can break down complex tasks into steps
-2. **File Operations**: Read, write, and edit files for context management
-3. **OpenAI Integration**: Leverages GPT-4o and other OpenAI models
-4. **Conversation Memory**: LangGraph checkpointing for persistent conversations
-5. **Layer 1 Session Memory**: Single-merchant sessions with smart caching and tracking
-6. **Phoenix Observability**: Automatic LLM tracing and monitoring
-7. **Extensible**: Easy to add custom tools and capabilities
+1. **Planning**: Agents can break down complex tasks into steps (TodoListMiddleware)
+2. **File Operations**: Read, write, and edit files for context management (FilesystemMiddleware)
+3. **Subagent Spawning**: Create specialized agents for complex workflows (SubAgentMiddleware)
+4. **OpenAI Integration**: Leverages GPT-4o and other OpenAI models
+5. **Conversation Memory**: LangGraph checkpointing for persistent conversations
+6. **Layer 1 Session Memory**: Single-merchant sessions with smart caching and tracking
+7. **Phoenix Observability**: Automatic LLM tracing and monitoring
+8. **Extensible**: Easy to add custom tools and middleware
 
 ### Key Components
 

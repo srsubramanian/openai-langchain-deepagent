@@ -27,6 +27,11 @@ def create_agent(
     """
     Create a DeepAgent with OpenAI.
 
+    The agent automatically includes the following middleware:
+    - TodoListMiddleware: Provides write_todos tool for task planning
+    - FilesystemMiddleware: File operations (write_file, read_file, edit_file, etc.)
+    - SubAgentMiddleware: Ability to spawn specialized sub-agents
+
     Args:
         model: Specific model name. If None, uses default: gpt-4o
         temperature: Temperature for the model (0.0-1.0)
@@ -36,7 +41,7 @@ def create_agent(
                            If None, reads from CHECKPOINT_DB_PATH env var (default: checkpoints.db)
 
     Returns:
-        Configured deep agent instance
+        Configured deep agent instance with built-in middleware
 
     Raises:
         ValueError: If OPENAI_API_KEY is missing
@@ -74,7 +79,82 @@ def create_agent(
         print(f"✓ Checkpointing enabled: {db_path}")
 
     # Create and return the deep agent
+    # Note: TodoListMiddleware, FilesystemMiddleware, and SubAgentMiddleware
+    # are automatically included by create_deep_agent()
     return create_deep_agent(model=llm, checkpointer=checkpointer)
+
+
+def create_agent_with_custom_middleware(
+    model: Optional[str] = None,
+    temperature: float = 0.7,
+    middleware: Optional[list] = None,
+    system_prompt: Optional[str] = None,
+    enable_checkpointing: Optional[bool] = None,
+    checkpoint_db_path: Optional[str] = None,
+) -> Any:
+    """
+    Create a DeepAgent with custom middleware.
+
+    Use this function if you need to add custom middleware in addition to the
+    default middleware (TodoListMiddleware, FilesystemMiddleware, SubAgentMiddleware).
+
+    Args:
+        model: Specific model name. If None, uses default: gpt-4o
+        temperature: Temperature for the model (0.0-1.0)
+        middleware: List of additional AgentMiddleware instances to apply
+                   (added after standard middleware)
+        system_prompt: Additional system instructions for the agent
+        enable_checkpointing: Enable conversation memory via checkpointing
+        checkpoint_db_path: Path to SQLite checkpoint database
+
+    Returns:
+        Configured deep agent instance with custom middleware
+
+    Example:
+        >>> from langchain.agents.middleware import LoggingMiddleware
+        >>> agent = create_agent_with_custom_middleware(
+        ...     middleware=[LoggingMiddleware()],
+        ...     system_prompt="You are a helpful coding assistant"
+        ... )
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "OPENAI_API_KEY not found in environment variables. "
+            "Please set it in your .env file or environment."
+        )
+
+    llm = ChatOpenAI(
+        model=model or "gpt-4o",
+        temperature=temperature,
+        api_key=api_key,
+    )
+
+    # Determine if checkpointing should be enabled
+    if enable_checkpointing is None:
+        enable_checkpointing = os.getenv("ENABLE_CHECKPOINTING", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # Create checkpointer if enabled
+    checkpointer = None
+    if enable_checkpointing:
+        db_path = checkpoint_db_path or os.getenv(
+            "CHECKPOINT_DB_PATH", "checkpoints.db"
+        )
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        checkpointer = SqliteSaver(conn)
+        print(f"✓ Checkpointing enabled: {db_path}")
+
+    # Create agent with custom middleware
+    return create_deep_agent(
+        model=llm,
+        middleware=middleware or [],
+        system_prompt=system_prompt,
+        checkpointer=checkpointer,
+    )
 
 
 def run_agent_task(task: str, model: Optional[str] = None) -> dict:
