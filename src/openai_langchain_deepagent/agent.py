@@ -5,7 +5,7 @@ import sqlite3
 from typing import Any, List, Optional
 
 from dotenv import load_dotenv
-from langchain.tools import Tool
+from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.prebuilt import create_react_agent
@@ -19,7 +19,17 @@ load_dotenv()
 setup_phoenix_instrumentation()
 
 
-def _get_default_tools() -> List[Tool]:
+@tool
+def calculator(expression: str) -> str:
+    """Evaluate a mathematical expression. Input should be a valid Python mathematical expression like '2 + 2' or '10 * 5'."""
+    try:
+        result = eval(expression)
+        return str(result)
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def _get_default_tools() -> List:
     """
     Get default tools for the agent.
 
@@ -27,24 +37,9 @@ def _get_default_tools() -> List[Tool]:
     for your merchant advisory use case.
 
     Returns:
-        List of LangChain Tool objects
+        List of LangChain tool objects
     """
-    # Example tool: Calculator
-    def calculate(expression: str) -> str:
-        """Evaluate a mathematical expression. Input should be a valid Python expression."""
-        try:
-            result = eval(expression)
-            return str(result)
-        except Exception as e:
-            return f"Error: {str(e)}"
-
-    calculator_tool = Tool(
-        name="Calculator",
-        func=calculate,
-        description="Useful for performing mathematical calculations. Input should be a valid Python mathematical expression like '2 + 2' or '10 * 5'."
-    )
-
-    return [calculator_tool]
+    return [calculator]
 
 
 def create_agent(
@@ -52,7 +47,7 @@ def create_agent(
     temperature: float = 0.7,
     enable_checkpointing: Optional[bool] = None,
     checkpoint_db_path: Optional[str] = None,
-    tools: Optional[List[Tool]] = None,
+    tools: Optional[List] = None,
 ) -> Any:
     """
     Create a LangChain ReAct agent with OpenAI.
@@ -138,7 +133,7 @@ def create_agent_with_session_memory(
     model: Optional[str] = None,
     temperature: float = 0.7,
     checkpoint_db_path: Optional[str] = None,
-    tools: Optional[List[Tool]] = None,
+    tools: Optional[List] = None,
 ) -> Any:
     """
     Create a LangChain agent with session memory (checkpointing always enabled).
