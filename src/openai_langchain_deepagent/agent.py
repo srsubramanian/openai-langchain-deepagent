@@ -1,6 +1,7 @@
 """DeepAgent implementation using LangChain DeepAgents library with OpenAI."""
 
 import os
+import sqlite3
 from typing import Any, Optional
 
 from deepagents import create_deep_agent
@@ -67,7 +68,9 @@ def create_agent(
         db_path = checkpoint_db_path or os.getenv(
             "CHECKPOINT_DB_PATH", "checkpoints.db"
         )
-        checkpointer = SqliteSaver.from_conn_string(db_path)
+        # Create SQLite connection with thread safety disabled for LangGraph
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        checkpointer = SqliteSaver(conn)
         print(f"✓ Checkpointing enabled: {db_path}")
 
     # Create and return the deep agent

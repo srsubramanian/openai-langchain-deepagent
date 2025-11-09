@@ -22,16 +22,19 @@ class TestCheckpointing:
     @patch("openai_langchain_deepagent.agent.create_deep_agent")
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
     @patch("openai_langchain_deepagent.agent.SqliteSaver")
+    @patch("openai_langchain_deepagent.agent.sqlite3")
     def test_checkpointing_enabled(
-        self, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
+        self, mock_sqlite3, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
     ):
         """Test that checkpointing can be enabled."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             # Mock the components
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_conn = MagicMock()
+            mock_sqlite3.connect.return_value = mock_conn
             mock_checkpointer = MagicMock()
-            mock_sqlite_saver.from_conn_string.return_value = mock_checkpointer
+            mock_sqlite_saver.return_value = mock_checkpointer
             mock_agent = MagicMock()
             mock_create_deep_agent.return_value = mock_agent
 
@@ -39,9 +42,10 @@ class TestCheckpointing:
             agent = create_agent(enable_checkpointing=True)
 
             # Verify checkpointer was created and passed
-            mock_sqlite_saver.from_conn_string.assert_called_once_with(
-                "checkpoints.db"
+            mock_sqlite3.connect.assert_called_once_with(
+                "checkpoints.db", check_same_thread=False
             )
+            mock_sqlite_saver.assert_called_once_with(mock_conn)
             mock_create_deep_agent.assert_called_once_with(
                 model=mock_llm, checkpointer=mock_checkpointer
             )
@@ -68,16 +72,19 @@ class TestCheckpointing:
     @patch("openai_langchain_deepagent.agent.create_deep_agent")
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
     @patch("openai_langchain_deepagent.agent.SqliteSaver")
+    @patch("openai_langchain_deepagent.agent.sqlite3")
     def test_custom_checkpoint_path(
-        self, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
+        self, mock_sqlite3, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
     ):
         """Test using a custom checkpoint database path."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             # Mock the components
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_conn = MagicMock()
+            mock_sqlite3.connect.return_value = mock_conn
             mock_checkpointer = MagicMock()
-            mock_sqlite_saver.from_conn_string.return_value = mock_checkpointer
+            mock_sqlite_saver.return_value = mock_checkpointer
             mock_agent = MagicMock()
             mock_create_deep_agent.return_value = mock_agent
 
@@ -88,7 +95,9 @@ class TestCheckpointing:
             )
 
             # Verify custom path was used
-            mock_sqlite_saver.from_conn_string.assert_called_once_with(custom_path)
+            mock_sqlite3.connect.assert_called_once_with(
+                custom_path, check_same_thread=False
+            )
 
 
 class TestSessionUtils:
@@ -130,16 +139,19 @@ class TestConversationMemory:
     @patch("openai_langchain_deepagent.agent.create_deep_agent")
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
     @patch("openai_langchain_deepagent.agent.SqliteSaver")
+    @patch("openai_langchain_deepagent.agent.sqlite3")
     def test_multiple_sessions_isolated(
-        self, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
+        self, mock_sqlite3, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
     ):
         """Test that different thread_ids maintain isolated sessions."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             # Mock components
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_conn = MagicMock()
+            mock_sqlite3.connect.return_value = mock_conn
             mock_checkpointer = MagicMock()
-            mock_sqlite_saver.from_conn_string.return_value = mock_checkpointer
+            mock_sqlite_saver.return_value = mock_checkpointer
 
             # Create mock agent that tracks invocations
             invocations = []
@@ -179,8 +191,9 @@ class TestConversationMemory:
     @patch("openai_langchain_deepagent.agent.create_deep_agent")
     @patch("openai_langchain_deepagent.agent.ChatOpenAI")
     @patch("openai_langchain_deepagent.agent.SqliteSaver")
+    @patch("openai_langchain_deepagent.agent.sqlite3")
     def test_env_var_configuration(
-        self, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
+        self, mock_sqlite3, mock_sqlite_saver, mock_chat_openai, mock_create_deep_agent
     ):
         """Test that environment variables control checkpointing."""
         # Test with checkpointing enabled via env var
@@ -194,8 +207,10 @@ class TestConversationMemory:
         ):
             mock_llm = MagicMock()
             mock_chat_openai.return_value = mock_llm
+            mock_conn = MagicMock()
+            mock_sqlite3.connect.return_value = mock_conn
             mock_checkpointer = MagicMock()
-            mock_sqlite_saver.from_conn_string.return_value = mock_checkpointer
+            mock_sqlite_saver.return_value = mock_checkpointer
             mock_agent = MagicMock()
             mock_create_deep_agent.return_value = mock_agent
 
@@ -203,8 +218,8 @@ class TestConversationMemory:
             agent = create_agent()
 
             # Verify checkpointer was created with env var path
-            mock_sqlite_saver.from_conn_string.assert_called_once_with(
-                "test_checkpoints.db"
+            mock_sqlite3.connect.assert_called_once_with(
+                "test_checkpoints.db", check_same_thread=False
             )
             mock_create_deep_agent.assert_called_once_with(
                 model=mock_llm, checkpointer=mock_checkpointer
