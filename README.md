@@ -173,6 +173,174 @@ clear_session("user-abc123")
 - Different `thread_id` values create isolated conversations
 - Each checkpoint includes full conversation state
 
+## Layer 1 Session Memory (Single-Merchant Conversations)
+
+This project implements **Layer 1 Session Memory**, a merchant-focused conversation memory system where each session is dedicated to ONE merchant with intelligent state management, caching, and tracking.
+
+### Overview
+
+Layer 1 provides:
+- **Single-merchant sessions**: One session = one merchant conversation
+- **Smart caching**: TTL-based caching for profiles, metrics, transactions, alerts
+- **Conversation tracking**: Topics discussed, recommendations, pending questions
+- **Session metadata**: Query counts, advisor notes, timestamps
+- **Merchant validation**: Ensure queries are about the correct merchant
+
+### Key Concepts
+
+**Session State Structure:**
+```python
+SessionState = {
+    # LangGraph messages (conversation history)
+    "messages": [...],
+
+    # Session metadata
+    "session_id": "ses_20250109_143022_abc123de",
+    "advisor_id": "adv_001",
+    "started_at": "2025-01-09T14:30:22.123456+00:00",
+    "last_activity_at": "2025-01-09T14:35:45.789012+00:00",
+
+    # Merchant context (SINGLE merchant per session)
+    "merchant_id": "mch_789456",
+    "merchant_name": "TechRetail",
+    "segment": "mid_market",  # small_business, mid_market, enterprise
+
+    # Session metrics
+    "total_queries": 5,
+
+    # Smart caching (with TTL)
+    "cached_data": {"profile": {...}, "metrics": {...}},
+    "cached_at": {"profile": "2025-01-09T14:30:00Z", ...},
+
+    # Conversation tracking
+    "topics_discussed": ["decline_rates", "transaction_volume"],
+    "recommendations": [{...}],
+    "pending_questions": ["What is the refund rate?"],
+    "advisor_notes": [{"note": "...", "timestamp": "..."}],
+
+    # Working data (scratch space)
+    "working_data": {}
+}
+```
+
+**Cache TTL Configuration:**
+- Profile data: 30 minutes (1800 seconds)
+- Metrics: 5 minutes (300 seconds)
+- Transactions: 1 minute (60 seconds)
+- Alerts: 30 seconds
+
+### Basic Usage
+
+```python
+from openai_langchain_deepagent.agent import (
+    start_merchant_session,
+    run_query_in_session,
+)
+from openai_langchain_deepagent.session_manager import add_topic, add_recommendation
+from openai_langchain_deepagent.session_inspector import print_session_state
+
+# Start a session for a merchant
+agent, thread_id, state = start_merchant_session(
+    advisor_id="adv_001",
+    merchant_id="789456",  # Auto-normalized to mch_789456
+    merchant_name="TechRetail",
+    segment="mid_market"
+)
+
+# Run queries with conversation memory
+response, state = run_query_in_session(
+    agent=agent,
+    thread_id=thread_id,
+    session_state=state,
+    query="What can you tell me about this merchant's decline rate?"
+)
+
+# Track topics and add recommendations
+state = add_topic(state, "decline_rates")
+state = add_recommendation(
+    state=state,
+    recommendation_type="decline_optimization",
+    priority="high",
+    description="Review fraud filter settings",
+    expected_impact="Reduce false positives by 15-20%"
+)
+
+# Inspect session state
+print_session_state(state, detailed=True)
+```
+
+### Running the Demo
+
+Run the single-merchant session demo:
+
+```bash
+uv run python examples/single_merchant_session_demo.py
+```
+
+This demonstrates:
+- Starting a merchant session
+- Running multiple queries with memory
+- Adding topics and recommendations
+- Merchant ID validation
+- Inspecting and exporting session data
+
+### Session Management Functions
+
+**Core functions in `session_manager.py`:**
+
+- `initialize_session_state()` - Create new session with unique ID
+- `extract_merchant_id()` - Extract merchant ID from text with regex
+- `increment_query_count()` - Update query count and timestamp
+- `cache_data()` / `get_cached_data()` - Smart caching with TTL
+- `add_topic()` - Add discussion topic (no duplicates)
+- `add_recommendation()` - Add recommendation with priority
+- `add_pending_question()` - Track unanswered questions
+- `add_advisor_note()` - Add timestamped advisor note
+- `get_session_summary()` - Get session metrics
+- `validate_merchant_match()` - Validate merchant ID
+
+**Session inspection functions:**
+
+- `print_session_state()` - Print formatted session info
+- `export_session_summary()` - Export JSON-serializable summary
+
+### Session ID Formats
+
+- **Session ID**: `ses_YYYYMMDD_HHMMSS_{8char_uuid}`
+  - Example: `ses_20250109_143022_abc123de`
+
+- **Thread ID**: `merchant_{merchant_id}_{YYYYMMDD_HHMMSS}`
+  - Example: `merchant_mch_789456_20250109_143022`
+
+- **Merchant ID**: Always normalized to `mch_XXXXXX` format
+  - Input: `789456` → Output: `mch_789456`
+  - Input: `mch_789456` → Output: `mch_789456`
+
+### Merchant Validation
+
+Ensure queries are about the correct merchant:
+
+```python
+from openai_langchain_deepagent.session_manager import validate_merchant_match
+
+# Validate merchant ID matches session
+is_valid = validate_merchant_match(state, "mch_789456")
+if not is_valid:
+    print("Warning: Query is about a different merchant!")
+```
+
+### Testing
+
+Run Layer 1 session memory tests:
+
+```bash
+# Run all session memory tests
+uv run pytest tests/test_session_memory.py -v
+
+# Run specific test
+uv run pytest tests/test_session_memory.py::TestSessionManager::test_cache_expiration -v
+```
+
 ## Phoenix Observability
 
 This project includes **automatic Phoenix instrumentation** for observability and tracing of your DeepAgent executions.
@@ -312,17 +480,22 @@ ruff format .
 │   └── openai_langchain_deepagent/
 │       ├── __init__.py
 │       ├── main.py              # Main entry point
-│       ├── agent.py             # DeepAgent implementation
+│       ├── agent.py             # DeepAgent implementation with session functions
 │       ├── instrumentation.py   # Phoenix observability setup
-│       └── session_utils.py     # Session/checkpoint management utilities
+│       ├── session_utils.py     # Session/checkpoint management utilities
+│       ├── state.py             # Layer 1: SessionState TypedDict definitions
+│       ├── session_manager.py   # Layer 1: Core session management functions
+│       └── session_inspector.py # Layer 1: Session inspection utilities
 ├── tests/
 │   ├── __init__.py
 │   ├── test_main.py
 │   ├── test_agent.py            # DeepAgent tests
-│   └── test_checkpointing.py    # Checkpointing tests
+│   ├── test_checkpointing.py    # Checkpointing tests
+│   └── test_session_memory.py   # Layer 1: Session memory tests
 ├── examples/
-│   ├── basic_agent.py           # Basic agent example
-│   └── conversation_with_memory.py  # Conversation memory demo
+│   ├── basic_agent.py                    # Basic agent example
+│   ├── conversation_with_memory.py       # Conversation memory demo
+│   └── single_merchant_session_demo.py   # Layer 1: Single-merchant session demo
 ├── .env.example                 # Example environment variables
 ├── docker-compose.yml           # Phoenix observability service
 ├── pyproject.toml               # Project configuration
@@ -339,12 +512,17 @@ This project demonstrates:
 1. **Planning**: Agents can break down complex tasks into steps
 2. **File Operations**: Read, write, and edit files for context management
 3. **OpenAI Integration**: Leverages GPT-4o and other OpenAI models
-4. **Extensible**: Easy to add custom tools and capabilities
+4. **Conversation Memory**: LangGraph checkpointing for persistent conversations
+5. **Layer 1 Session Memory**: Single-merchant sessions with smart caching and tracking
+6. **Phoenix Observability**: Automatic LLM tracing and monitoring
+7. **Extensible**: Easy to add custom tools and capabilities
 
 ### Key Components
 
-- `agent.py`: Core DeepAgent implementation with provider abstraction
-- `examples/basic_agent.py`: Demonstrates common use cases
+- `agent.py`: Core DeepAgent implementation with session functions
+- `session_manager.py`: Layer 1 session state management with caching
+- `session_inspector.py`: Session inspection and export utilities
+- `examples/single_merchant_session_demo.py`: Complete Layer 1 demo
 - Comprehensive test suite with mocking for CI/CD
 
 ## Configuration
