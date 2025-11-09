@@ -58,8 +58,7 @@ def demo_single_merchant_session():
         merchant_name="TechRetail",
         segment="mid_market",
     )
-    print(f"✓ Session started: {state['session_id']}")
-    print(f"✓ Thread ID: {thread_id}")
+    print(f"✓ Thread ID (session identifier): {thread_id}")
     print(f"✓ Merchant: {state['merchant_id']}")
     print()
 

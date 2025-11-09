@@ -194,8 +194,7 @@ SessionState = {
     # LangGraph messages (conversation history)
     "messages": [...],
 
-    # Session metadata
-    "session_id": "ses_20250109_143022_abc123de",
+    # Session metadata (uses thread_id as identifier)
     "advisor_id": "adv_001",
     "started_at": "2025-01-09T14:30:22.123456+00:00",
     "last_activity_at": "2025-01-09T14:35:45.789012+00:00",
@@ -304,13 +303,11 @@ This demonstrates:
 - `print_session_state()` - Print formatted session info
 - `export_session_summary()` - Export JSON-serializable summary
 
-### Session ID Formats
+### Session Identifier Format
 
-- **Session ID**: `ses_YYYYMMDD_HHMMSS_{8char_uuid}`
-  - Example: `ses_20250109_143022_abc123de`
-
-- **Thread ID**: `merchant_{merchant_id}_{YYYYMMDD_HHMMSS}`
+- **Thread ID** (session identifier): `merchant_{merchant_id}_{YYYYMMDD_HHMMSS}`
   - Example: `merchant_mch_789456_20250109_143022`
+  - Used for: LangGraph checkpointing, Phoenix tracing, session management
 
 - **Merchant ID**: Always normalized to `mch_XXXXXX` format
   - Input: `789456` → Output: `mch_789456`
@@ -386,8 +383,8 @@ open http://localhost:6006
 **Viewing traces in Phoenix:**
 
 ```python
-# Filter by session ID to see all queries
-session.id = "ses_20250109_143022_abc123de"
+# Filter by thread ID (session identifier) to see all queries
+session.thread_id = "merchant_mch_789456_20250109_143022"
 
 # Find sessions with recommendations
 session.recommendations_count > 0

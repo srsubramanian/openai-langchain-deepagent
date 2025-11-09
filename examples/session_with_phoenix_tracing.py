@@ -64,7 +64,7 @@ def demo_traced_multi_turn_session():
     print("   Open Phoenix UI to see traces in real-time!")
     print()
     print("🔍 What to look for in Phoenix:")
-    print("   - Filter by session.id to see all queries in this session")
+    print("   - Filter by session.thread_id to see all queries in this session")
     print("   - View 'session_snapshot_before' and 'session_snapshot_after' events")
     print("   - Check cache.hit attributes on cache_lookup spans")
     print("   - Track session evolution via session.topics and session.recommendations_count")
@@ -95,12 +95,12 @@ def demo_traced_multi_turn_session():
         )
 
         if parent_span:
-            parent_span.set_attribute("session.id", state["session_id"])
+            parent_span.set_attribute("session.thread_id", thread_id)
             parent_span.set_attribute("merchant.id", state["merchant_id"])
             parent_span.add_event("session_started")
 
-        print(f"✅ Session Started: {state['session_id']}")
-        print(f"   Thread ID: {thread_id}")
+        print(f"✅ Session Started")
+        print(f"   Thread ID (session identifier): {thread_id}")
         print(f"   Merchant: {state['merchant_id']} ({state['merchant_name']})")
         print(f"   Segment: {state['segment']}")
         print()
@@ -219,7 +219,7 @@ def demo_traced_multi_turn_session():
 
         print(f"📊 Phoenix: Query 3 should reference context from Query 1 and 2")
         print(
-            f"   All 3 queries should have same session.id: {state['session_id']}"
+            f"   All 3 queries should have same session.thread_id: {thread_id}"
         )
         print()
         time.sleep(2)
@@ -293,7 +293,7 @@ def demo_traced_multi_turn_session():
         print("🔍 How to analyze this session in Phoenix:")
         print()
         print("1️⃣  View All Queries in Session:")
-        print(f'   Filter: session.id = "{state["session_id"]}"')
+        print(f'   Filter: session.thread_id = "{thread_id}"')
         print("   Sort by: timestamp")
         print("   You should see 4 'merchant_query' spans")
         print()
@@ -326,7 +326,7 @@ def demo_traced_multi_turn_session():
         print()
         print("💡 Next Steps:")
         print("   1. Open Phoenix UI: http://localhost:6006")
-        print(f'   2. Search for session: {state["session_id"]}')
+        print(f'   2. Filter by: session.thread_id = "{thread_id}"')
         print("   3. Explore traces, events, and attributes")
         print("   4. Try filtering by merchant.id, advisor.id, or cache.hit")
         print()
@@ -352,7 +352,7 @@ def demo_cache_expiration_tracing():
         advisor_id="adv_cache_demo", merchant_id="111222", merchant_name="CacheTest"
     )
 
-    print(f"Session: {state['session_id']}")
+    print(f"Thread ID (session identifier): {thread_id}")
     print()
 
     # Cache data

@@ -38,9 +38,7 @@ def run_test_and_show_expected_attributes():
         segment="mid_market",
     )
 
-    session_id = state["session_id"]
-    print(f"   ✓ Session ID: {session_id}")
-    print(f"   ✓ Thread ID: {thread_id}")
+    print(f"   ✓ Thread ID (session identifier): {thread_id}")
     print()
 
     # Run a test query
@@ -67,7 +65,7 @@ def run_test_and_show_expected_attributes():
     print("=" * 80)
     print()
     print("🔍 In Phoenix UI, filter by:")
-    print(f"   session.id = \"{session_id}\"")
+    print(f"   session.thread_id = \"{thread_id}\"")
     print()
     print("📍 You should see a span named: merchant_query")
     print()
@@ -77,7 +75,6 @@ def run_test_and_show_expected_attributes():
     # Show expected attributes
     expected_attributes = {
         "Session Identifiers": {
-            "session.id": session_id,
             "session.thread_id": thread_id,
             "session.advisor_id": "debug_test",
             "session.query_number": 1,
@@ -154,7 +151,7 @@ def run_test_and_show_expected_attributes():
     print("1. Open Phoenix UI: http://localhost:6006")
     print()
     print("2. In the filter box, enter:")
-    print(f"   session.id = \"{session_id}\"")
+    print(f"   session.thread_id = \"{thread_id}\"")
     print()
     print("3. You should see ONE trace with a 'merchant_query' span")
     print()
@@ -186,7 +183,7 @@ def show_span_hierarchy():
     print("├─ Attributes:")
     print("│  ├─ input.value: <user query>        ← USER MESSAGE")
     print("│  ├─ output.value: <AI response>      ← AI RESPONSE")
-    print("│  ├─ session.id: ses_...")
+    print("│  ├─ session.thread_id: merchant_...")
     print("│  ├─ merchant.id: mch_...")
     print("│  └─ ... (many more)")
     print("│")
@@ -232,7 +229,7 @@ def show_common_mistakes():
         ),
         (
             "❌ Filtering by wrong session ID",
-            "✅ Use session.id (ses_...) or session.thread_id (merchant_...)",
+            "✅ Use session.thread_id (merchant_...)",
         ),
         (
             "❌ Phoenix not running or not receiving traces",
@@ -272,7 +269,7 @@ if __name__ == "__main__":
     print()
     print("Next steps:")
     print("1. Open Phoenix UI: http://localhost:6006")
-    print("2. Use the session.id shown above to filter")
+    print("2. Use the session.thread_id shown above to filter")
     print("3. Click on the 'merchant_query' span")
     print("4. Check Attributes tab for input.value and output.value")
     print()

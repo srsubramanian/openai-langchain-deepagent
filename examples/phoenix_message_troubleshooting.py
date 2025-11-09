@@ -138,7 +138,7 @@ def run_simple_test():
             merchant_name="Test Merchant",
         )
 
-        print(f"✓ Session created: {state['session_id']}")
+        print(f"✓ Session created with thread ID: {thread_id}")
         print()
 
         # Run one query
@@ -157,7 +157,7 @@ def run_simple_test():
         print("=" * 80)
         print()
         print("Now check Phoenix UI:")
-        print(f"1. Filter by: session.id = '{state['session_id']}'")
+        print(f"1. Filter by: session.thread_id = '{thread_id}'")
         print("2. Click on the 'merchant_query' span")
         print("3. Look at Attributes tab:")
         print(f"   - input.value should be: '{query}'")

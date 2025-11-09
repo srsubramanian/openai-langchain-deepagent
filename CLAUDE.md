@@ -59,6 +59,13 @@
 - Created troubleshooting guides and debug scripts
 - Last 4 debugging commits were removed (per user request)
 
+### Session 8: Simplified Session Management
+- Removed dual-ID system (ses_ session ID) to simplify architecture
+- Now using only thread_id (merchant_...) as single session identifier
+- Retained all Layer 1 features (topics, recommendations, caching, notes)
+- Updated all code, tests, examples, and documentation
+- Resolves Phoenix message visibility issues by using only thread_id
+
 ---
 
 ## Architecture
@@ -112,19 +119,18 @@ Constants:
 
 ## Key Concepts
 
-### Two Different IDs
+### Session Identifier (Thread ID)
 
-**Thread ID** (LangGraph):
+Sessions are identified by a single **Thread ID**:
 - Format: `merchant_{merchant_id}_{YYYYMMDD_HHMMSS}`
 - Example: `merchant_mch_789456_20251109_121606`
-- Purpose: LangGraph conversation memory (checkpoints.db)
-- Used in: `agent.invoke(messages, config={"thread_id": thread_id})`
-
-**Session ID** (Layer 1):
-- Format: `ses_{YYYYMMDD_HHMMSS}_{8char_uuid}`
-- Example: `ses_20251109_121702_e42f2526`
-- Purpose: Business session tracking (topics, recommendations, cache)
-- Used in: Phoenix tracing, session management, analytics
+- Purpose:
+  - LangGraph conversation memory (checkpoints.db)
+  - Phoenix tracing and observability
+  - Session management and analytics
+- Used in:
+  - `agent.invoke(messages, config={"thread_id": thread_id})`
+  - Phoenix span attribute: `session.thread_id`
 
 ### Session State Structure
 
@@ -133,8 +139,7 @@ SessionState = {
     # LangGraph messages
     "messages": List[BaseMessage],
 
-    # Session metadata
-    "session_id": "ses_20251109_143022_abc123de",
+    # Session metadata (uses thread_id as identifier)
     "advisor_id": "adv_001",
     "started_at": "2025-01-09T14:30:22.123456+00:00",  # ISO 8601 UTC
     "last_activity_at": "2025-01-09T14:35:45.789012+00:00",
@@ -188,7 +193,7 @@ DEFAULT_CACHE_CONFIG = {
 **What Gets Traced on `merchant_query` Spans:**
 
 1. **Session Metadata** (attributes):
-   - session.id, session.thread_id, session.advisor_id
+   - session.thread_id, session.advisor_id
    - merchant.id, merchant.name, merchant.segment
    - session.query_number
 
@@ -278,23 +283,17 @@ PHOENIX_ENABLED=false
 
 ## Known Issues
 
-### ⚠️ Phoenix Message Visibility
+### ✅ Resolved: Phoenix Message Visibility
 
-**Issue**: Messages show as "undefined" in Phoenix Sessions view when filtering by `session.id = "ses_..."`
+**Previous Issue**: Messages showed as "undefined" in Phoenix Sessions view when filtering by `session.id = "ses_..."`
 
-**Works**: Filtering by `thread_id = "merchant_..."` shows messages correctly
-
-**Root Cause**: Unknown - may need specific OpenInference semantic convention format
-
-**Workaround**: Use thread_id filter instead of session.id filter
+**Resolution**: Simplified architecture to use only `thread_id` as session identifier. The dual-ID system (ses_ + merchant_) has been removed.
 
 **Current State**:
-- Added basic message attributes (input.value, output.value)
-- Added message events (user_message, assistant_message)
-- Still investigating correct format for Phoenix Sessions view
-- Last 4 debugging attempts were reverted
-
-**Next Steps**: May need to examine Phoenix source code or OpenInference specification to understand expected message format
+- Sessions identified by `thread_id` only (format: `merchant_{merchant_id}_{timestamp}`)
+- Phoenix filtering works correctly: `session.thread_id = "merchant_..."`
+- Message attributes (input.value, output.value) display correctly
+- All Layer 1 features retained (topics, recommendations, caching, notes)
 
 ---
 
@@ -368,11 +367,14 @@ uv run pytest tests/test_session_memory.py::TestSessionManager::test_cache_expir
 # Open Phoenix UI
 open http://localhost:6006
 
-# Filter by session ID
-session.id = "ses_20251109_143022_abc123de"
-
-# Or filter by thread ID (messages work here)
+# Filter by thread ID (session identifier)
 session.thread_id = "merchant_mch_789456_20251109_143022"
+
+# Or filter by merchant ID
+merchant.id = "mch_789456"
+
+# Or filter by advisor ID
+session.advisor_id = "adv_001"
 ```
 
 ---
@@ -527,36 +529,38 @@ assert data is None
 
 ## Tips for Future Sessions
 
-1. **Message Visibility Issue**: The Phoenix "undefined messages" issue is ongoing. The span attributes are set correctly in code, but Phoenix Sessions view may need a specific format we haven't discovered yet.
+1. **Single Session Identifier**: Sessions use only `thread_id` (format: `merchant_{merchant_id}_{timestamp}`). The dual-ID system has been removed for simplicity.
 
-2. **Two IDs Are Normal**: session.id (ses_...) and thread_id (merchant_...) serve different purposes. Both are needed.
-
-3. **Always Pull First**: User may have made changes locally
+2. **Always Pull First**: User may have made changes locally
    ```bash
    git pull origin claude/create-uv-python-sta-011CUvfQSdayosdQZsBpvUpL
    ```
 
-4. **Test After Changes**: Run test suite to ensure nothing broke
+3. **Test After Changes**: Run test suite to ensure nothing broke
    ```bash
    uv run pytest -v
    ```
 
-5. **Phoenix Must Be Running**: For tracing demos to work
+4. **Phoenix Must Be Running**: For tracing demos to work
    ```bash
    docker compose up -d
    ```
 
-6. **Session State is Immutable**: Always return new state from functions, don't modify in place
+5. **Session State is Immutable**: Always return new state from functions, don't modify in place
 
-7. **Check .env Setup**: User needs OPENAI_API_KEY set for examples to work
+6. **Check .env Setup**: User needs OPENAI_API_KEY set for examples to work
 
 ---
 
 ## Recent Changes to Be Aware Of
 
-- `instrumentation.py` was modified to add `skip_dep_check=True` and message capture confirmation
+- **Session 8 (Current)**: Removed dual-ID system (ses_ session ID)
+  - Now using only `thread_id` as session identifier
+  - Updated all code, tests, examples, and documentation
+  - Resolves Phoenix message visibility issues
 - Last 4 commits regarding Phoenix message debugging were removed per user request
-- Current HEAD is at: `209b88c Add debugging guides for Phoenix session ID and message visibility`
+- Session state TypedDict no longer has `session_id` field
+- Phoenix tracing uses `session.thread_id` instead of `session.id`
 
 ---
 
@@ -568,5 +572,5 @@ assert data is None
 
 ---
 
-**Last Updated**: 2025-01-09 (Session with message visibility debugging)
-**Status**: Production-ready with one known issue (Phoenix message visibility)
+**Last Updated**: 2025-01-09 (Session 8: Simplified session management)
+**Status**: Production-ready
